@@ -1,7 +1,8 @@
 // حفّار الماس ⛏️: الأرنب يحفر التراب ويجمع الماس ثم يخرج من الباب المضيء.
 // 8 مراحل بخرائط ثابتة، مؤقت مريح 120 ثانية، بلا خصم أبداً.
-// التحكم: 4 أزرار أسهم كبيرة + السحب على الشبكة.
+// التحكم: السحب المستمر بإصبع الطفل على الشبكة (بلا أزرار أسهم).
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
@@ -151,7 +152,7 @@ class _DiggerPlayScreenState extends State<DiggerPlayScreen>
 
   @override
   String get guideText =>
-      'أنا الأرنب! احفر التراب بالأسهم، واجمع كل الماس، ثم اخرج من الباب المضيء!';
+      'أنا الأرنب! اسحب بإصبعك على التراب، واجمع كل الماس، ثم اخرج من الباب المضيء!';
 
   late DiggerState _state;
   late int _timeLeft;
@@ -159,6 +160,13 @@ class _DiggerPlayScreenState extends State<DiggerPlayScreen>
   bool _over = false;
   // آخر مرة نطق فيها «يم!» — لمنع تداخل الصوت عند الجمع السريع.
   DateTime _lastYum = DateTime.fromMillisecondsSinceEpoch(0);
+  // تتبع السحب المستمر: الإزاحة المتراكمة منذ بداية اللمسة، وحجم
+  // الخلية (يُحسب عند التخطيط) كعتبة لخطوة واحدة، وحارس يمنع
+  // تداخل خطوتين أثناء السحب السريع.
+  double _panDx = 0;
+  double _panDy = 0;
+  double _cellSize = 50;
+  bool _panMoving = false;
 
   @override
   void initState() {
@@ -204,8 +212,52 @@ class _DiggerPlayScreenState extends State<DiggerPlayScreen>
     }
   }
 
+  /// السحب المستمر: كلما تجاوزت الإزاحة المتراكمة عتبة خلية واحدة
+  /// في المحور الأقوى يتحرك الأرنب خلية فوراً، ويستمر مع استمرار السحب.
+  /// الخطوة المرفوضة (صخرة/قنفذ) تستهلك العتبة أيضاً فلا يقفز
+  /// الأرنب لاحقاً — التوقف أمامها من المحرك نفسه.
+  void _onPanUpdate(DragUpdateDetails details) {
+    if (_over) return;
+    _panDx += details.delta.dx;
+    _panDy += details.delta.dy;
+    _drainPan();
+  }
+
+  void _drainPan() {
+    if (_panMoving) return;
+    if (_panDx.abs() >= _cellSize && _panDx.abs() >= _panDy.abs()) {
+      final dir =
+          _panDx > 0 ? DiggerDirection.right : DiggerDirection.left;
+      _panDx -= _cellSize * (_panDx > 0 ? 1 : -1);
+      _stepPan(dir);
+    } else if (_panDy.abs() >= _cellSize && _panDy.abs() > _panDx.abs()) {
+      final dir = _panDy > 0 ? DiggerDirection.down : DiggerDirection.up;
+      _panDy -= _cellSize * (_panDy > 0 ? 1 : -1);
+      _stepPan(dir);
+    }
+  }
+
+  Future<void> _stepPan(DiggerDirection dir) async {
+    _panMoving = true;
+    try {
+      await _move(dir);
+    } finally {
+      _panMoving = false;
+      // خطوة تراكمت أثناء الحركة السابقة تُنفذ فوراً.
+      _drainPan();
+    }
+  }
+
+  /// تصفير الإزاحة المتراكمة عند انتهاء اللمس أو إلغائها، حتى تبدأ
+  /// كل لمسة جديدة من الصفر بدون بقايا حركة سابقة.
+  void _resetPan() {
+    _panDx = 0;
+    _panDy = 0;
+  }
+
   /// إعادة المرحلة من البداية بعد انتهاء الوقت (بلا خصم نجوم أبداً).
   void _restart() {
+    _resetPan();
     _timer?.cancel();
     setState(() {
       _state = DiggerEngine.parse(widget.level);
@@ -281,7 +333,7 @@ class _DiggerPlayScreenState extends State<DiggerPlayScreen>
     }
   }
 
-  Widget _cell(int r, int c) {
+  Widget _cell(int r, int c, double cellSize) {
     final isPlayer = _state.playerRow == r && _state.playerCol == c;
     final cell = _state.cellAt(r, c);
     Color bg;
@@ -302,43 +354,21 @@ class _DiggerPlayScreenState extends State<DiggerPlayScreen>
         );
       case DiggerCell.diamond:
         bg = const Color(0xFF3E2723);
-        child = const Text('💎', style: TextStyle(fontSize: 26));
+        child = Text('💎', style: TextStyle(fontSize: cellSize * 0.53));
       case DiggerCell.hedgehog:
         bg = const Color(0xFF3E2723);
-        child = const Text('🦔', style: TextStyle(fontSize: 26));
+        child = Text('🦔', style: TextStyle(fontSize: cellSize * 0.53));
       case DiggerCell.exit:
         bg =
             _state.exitOpen ? Colors.amber.shade300 : Colors.grey.shade600;
-        child = const Text('🚪', style: TextStyle(fontSize: 26));
+        child = Text('🚪', style: TextStyle(fontSize: cellSize * 0.53));
     }
     return Container(
       color: bg,
       child: Center(
         child: isPlayer
-            ? const Text('🐰', style: TextStyle(fontSize: 32))
+            ? Text('🐰', style: TextStyle(fontSize: cellSize * 0.65))
             : child,
-      ),
-    );
-  }
-
-  Widget _arrow(IconData icon, String tooltip, DiggerDirection dir) {
-    return Tooltip(
-      message: tooltip,
-      child: SizedBox(
-        width: 72,
-        height: 72,
-        child: ElevatedButton(
-          onPressed: () => _move(dir),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.brown,
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          child: Icon(icon, size: 44),
-        ),
       ),
     );
   }
@@ -363,8 +393,8 @@ class _DiggerPlayScreenState extends State<DiggerPlayScreen>
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 16, 8, 16),
         child: Column(
           children: [
             if (guideVisible)
@@ -413,80 +443,59 @@ class _DiggerPlayScreenState extends State<DiggerPlayScreen>
               ],
             ),
             const SizedBox(height: 12),
-            // الشبكة: السحب عليها يحرك الأرنب أيضاً.
-            GestureDetector(
-              onHorizontalDragEnd: (details) {
-                if (details.primaryVelocity == null) return;
-                _move(
-                  details.primaryVelocity! > 0
-                      ? DiggerDirection.right
-                      : DiggerDirection.left,
-                );
-              },
-              onVerticalDragEnd: (details) {
-                if (details.primaryVelocity == null) return;
-                _move(
-                  details.primaryVelocity! > 0
-                      ? DiggerDirection.down
-                      : DiggerDirection.up,
-                );
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.brown.shade700, width: 3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(9),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                      mainAxisSpacing: 2,
-                      crossAxisSpacing: 2,
+            // الشبكة تملأ المساحة المتبقية بعد حذف الأسهم: خلايا
+            // مربعة، الأصغر بين العرض (7 أعمدة) والارتفاع (9 صفوف)،
+            // فتكبر الخلايا والرموز معها — وبلا تمرير للشاشة.
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final cell = math.min(
+                    (constraints.maxWidth - 12) / 7,
+                    (constraints.maxHeight - 16) / 9,
+                  );
+                  // عتبة السحب = حجم خلية واحدة (تُقرأ عند اللمس فقط).
+                  _cellSize = cell;
+                  return Center(
+                    child: SizedBox(
+                      width: cell * 7 + 12,
+                      height: cell * 9 + 16,
+                      child: GestureDetector(
+                        onPanUpdate: _onPanUpdate,
+                        onPanEnd: (_) => _resetPan(),
+                        onPanCancel: _resetPan,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.brown.shade700,
+                              width: 3,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(9),
+                            child: GridView.builder(
+                              physics:
+                                  const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 7,
+                                mainAxisSpacing: 2,
+                                crossAxisSpacing: 2,
+                              ),
+                              itemCount: _state.rows * _state.cols,
+                              itemBuilder: (context, i) => _cell(
+                                i ~/ _state.cols,
+                                i % _state.cols,
+                                cell,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    itemCount: _state.rows * _state.cols,
-                    itemBuilder: (context, i) =>
-                        _cell(i ~/ _state.cols, i % _state.cols),
-                  ),
-                ),
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 16),
-            // أزرار الأسهم الكبيرة.
-            Column(
-              children: [
-                _arrow(
-                  Icons.keyboard_arrow_up,
-                  'أعلى',
-                  DiggerDirection.up,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _arrow(
-                      Icons.keyboard_arrow_right,
-                      'يمين',
-                      DiggerDirection.right,
-                    ),
-                    const SizedBox(width: 8),
-                    _arrow(
-                      Icons.keyboard_arrow_down,
-                      'أسفل',
-                      DiggerDirection.down,
-                    ),
-                    const SizedBox(width: 8),
-                    _arrow(
-                      Icons.keyboard_arrow_left,
-                      'يسار',
-                      DiggerDirection.left,
-                    ),
-                  ],
-                ),
-              ],
             ),
           ],
         ),

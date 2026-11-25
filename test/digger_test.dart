@@ -275,12 +275,31 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    Future<void> tapArrow(
+    /// سحبة خطوة واحدة في اتجاه: إزاحة أكبر من خلية بقليل فتُنفذ
+    /// خطوة واحدة فقط (العتبة = عرض خلية واحدة).
+    Future<void> dragStep(
       WidgetTester tester,
-      IconData icon,
+      DiggerDirection dir,
     ) async {
-      await tester.tap(find.byIcon(icon));
-      // المؤقت الدوري يمنع pumpAndSettle؛ ضغطة واحدة تكفي للحركة.
+      final gridSize = tester.getSize(find.byType(GridView));
+      final cell = gridSize.width / 7;
+      final offset = switch (dir) {
+        DiggerDirection.right => Offset(cell + 2, 0),
+        DiggerDirection.left => Offset(-cell - 2, 0),
+        DiggerDirection.down => Offset(0, cell + 2),
+        DiggerDirection.up => Offset(0, -cell - 2),
+      };
+      await tester.drag(find.byType(GridView), offset);
+      // المؤقت الدوري يمنع pumpAndSettle؛ سحبة واحدة تكفي للخطوة.
+      await tester.pump();
+    }
+
+    /// فتح شاشة لعب مرحلة معينة وتخطي بطاقة التعليمات.
+    Future<void> openLevel(WidgetTester tester, String label) async {
+      await pumpSelect(tester);
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('فهمت، لنبدأ!'));
       await tester.pump();
     }
 
@@ -302,8 +321,8 @@ void main() {
       await tester.pump();
       expect(find.text('إعادة المرحلة'), findsOneWidget);
       // جمع ماسة أولاً ثم إعادة المرحلة.
-      await tapArrow(tester, Icons.keyboard_arrow_right);
-      await tapArrow(tester, Icons.keyboard_arrow_right);
+      await dragStep(tester, DiggerDirection.right);
+      await dragStep(tester, DiggerDirection.right);
       expect(find.text('💎 1 / 3'), findsOneWidget);
       await tester.tap(find.text('إعادة المرحلة'));
       await tester.pump();
@@ -312,7 +331,7 @@ void main() {
       expect(find.text('🐰'), findsOneWidget);
     });
 
-    testWidgets('playing level 1: arrows dig and collect, exit completes',
+    testWidgets('playing level 1: drags dig and collect, exit completes',
         (tester) async {
       await pumpSelect(tester);
       await tester.tap(find.text('المرحلة 1'));
@@ -328,16 +347,16 @@ void main() {
       await tester.tap(find.text('فهمت، لنبدأ!'));
       await tester.pump();
       // يمين، يمين: جمع أول ماسة.
-      await tapArrow(tester, Icons.keyboard_arrow_right);
-      await tapArrow(tester, Icons.keyboard_arrow_right);
+      await dragStep(tester, DiggerDirection.right);
+      await dragStep(tester, DiggerDirection.right);
       expect(find.text('💎 1 / 3'), findsOneWidget);
       // بقية الحل: أسفل ×5، يسار ×2، أسفل.
       for (var i = 0; i < 5; i++) {
-        await tapArrow(tester, Icons.keyboard_arrow_down);
+        await dragStep(tester, DiggerDirection.down);
       }
-      await tapArrow(tester, Icons.keyboard_arrow_left);
-      await tapArrow(tester, Icons.keyboard_arrow_left);
-      await tapArrow(tester, Icons.keyboard_arrow_down);
+      await dragStep(tester, DiggerDirection.left);
+      await dragStep(tester, DiggerDirection.left);
+      await dragStep(tester, DiggerDirection.down);
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
       expect(find.text('رائع! 🎉'), findsOneWidget);
@@ -358,19 +377,19 @@ void main() {
       await tester.tap(find.text('فهمت، لنبدأ!'));
       await tester.pump();
       const moves = [
-        Icons.keyboard_arrow_right,
-        Icons.keyboard_arrow_right,
-        Icons.keyboard_arrow_down,
-        Icons.keyboard_arrow_down,
-        Icons.keyboard_arrow_down,
-        Icons.keyboard_arrow_down,
-        Icons.keyboard_arrow_down,
-        Icons.keyboard_arrow_left,
-        Icons.keyboard_arrow_left,
-        Icons.keyboard_arrow_down,
+        DiggerDirection.right,
+        DiggerDirection.right,
+        DiggerDirection.down,
+        DiggerDirection.down,
+        DiggerDirection.down,
+        DiggerDirection.down,
+        DiggerDirection.down,
+        DiggerDirection.left,
+        DiggerDirection.left,
+        DiggerDirection.down,
       ];
-      for (final icon in moves) {
-        await tapArrow(tester, icon);
+      for (final dir in moves) {
+        await dragStep(tester, dir);
       }
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
@@ -380,6 +399,61 @@ void main() {
       expect(find.text('حفّار الماس ⛏️'), findsOneWidget);
       expect(find.byIcon(Icons.star), findsOneWidget);
       expect(find.text('المرحلة 2'), findsOneWidget);
+    });
+
+    testWidgets('continuous drag crosses several cells in one gesture',
+        (tester) async {
+      await openLevel(tester, 'المرحلة 1');
+      expect(find.text('💎 0 / 3'), findsOneWidget);
+      final gridSize = tester.getSize(find.byType(GridView));
+      final cell = gridSize.width / 7;
+      // لمسة واحدة مستمرة: خطوتان يمين دون رفع الإصبع.
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.byType(GridView)));
+      await gesture.moveBy(Offset(cell + 2, 0));
+      await tester.pump();
+      await gesture.moveBy(Offset(cell + 2, 0));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+      expect(find.text('💎 1 / 3'), findsOneWidget);
+    });
+
+    testWidgets('drag into a rock stops the rabbit without moving it',
+        (tester) async {
+      // فتح المرحلة 3 مباشرة من القيم المحاكاة.
+      SharedPreferences.setMockInitialValues(
+        <String, Object>{'c_فارس_digger_unlocked': 3},
+      );
+      await openLevel(tester, 'المرحلة 3');
+      expect(find.text('المرحلة 3 ⛏️ — الصخرة الأولى'), findsOneWidget);
+      expect(find.text('💎 0 / 2'), findsOneWidget);
+      // يمين، يمين: جمع أول ماسة. ثم أسفل: خلية فارغة فوق الصخرة.
+      await dragStep(tester, DiggerDirection.right);
+      await dragStep(tester, DiggerDirection.right);
+      expect(find.text('💎 1 / 2'), findsOneWidget);
+      await dragStep(tester, DiggerDirection.down);
+      final before = tester.getCenter(find.text('🐰'));
+      // السحب للأسفل نحو الصخرة مرفوض مرتين: الأرنب لا يتحرك.
+      await dragStep(tester, DiggerDirection.down);
+      await dragStep(tester, DiggerDirection.down);
+      expect(tester.getCenter(find.text('🐰')), before);
+      expect(find.text('💎 1 / 2'), findsOneWidget);
+      // وبعد السحبات المرفوضة ما زال الأرنب يتحرك يساراً من مكانه.
+      await dragStep(tester, DiggerDirection.left);
+      final after = tester.getCenter(find.text('🐰'));
+      expect(after.dx, lessThan(before.dx));
+      expect(after.dy, before.dy);
+    });
+
+    testWidgets('no arrow buttons remain on the play screen',
+        (tester) async {
+      await openLevel(tester, 'المرحلة 1');
+      expect(find.byIcon(Icons.keyboard_arrow_up), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_down), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_right), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_left), findsNothing);
+      expect(find.byType(GridView), findsOneWidget);
     });
   });
 }
