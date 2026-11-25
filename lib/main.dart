@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import 'data/animals.dart';
@@ -11,6 +12,7 @@ import 'data/quran.dart';
 import 'data/religion.dart';
 import 'data/stories.dart';
 import 'services/app_sound.dart';
+import 'services/backup_service.dart';
 import 'services/child_profile.dart';
 import 'services/progress_store.dart';
 import 'utils/matching.dart';
@@ -256,28 +258,69 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  Timer? _timer;
+  bool _gone = false;
+
   @override
   void initState() {
     super.initState();
-    // الشاشة الافتتاحية: صورة المستخدم بملء الشاشة 5 ثوانٍ ثم الرئيسية.
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
-    });
+    // الشاشة الافتتاحية: صورة المستخدم بملء الشاشة 5 ثوانٍ ثم الرئيسية،
+    // أو فوراً عند الضغط على «تخطٍّ».
+    _timer = Timer(const Duration(seconds: 5), _goHome);
+  }
+
+  void _goHome() {
+    if (_gone || !mounted) return;
+    _gone = true;
+    _timer?.cancel();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Image.asset(
-        'assets/splash.jpg',
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/splash.jpg',
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+          Positioned(
+            bottom: 32,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: ElevatedButton.icon(
+                onPressed: _goHome,
+                icon: const Icon(Icons.skip_next, size: 32),
+                label: const Text(
+                  'تخطٍّ',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.9),
+                  foregroundColor: Colors.brown,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -404,8 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             if (confirmed != true) return;
                             await ChildProfile.removeChild(kid);
                             final kids = await ChildProfile.children();
-                            final current =
-                                await ChildProfile.currentChild();
+                            final current = await ChildProfile.currentChild();
                             setSheetState(() => _children = kids);
                             await _load();
                             if (current != _childName) {
@@ -455,9 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
                         return;
                       }
-                      await ChildProfile.setCurrent(
-                        nameController.text.trim(),
-                      );
+                      await ChildProfile.setCurrent(nameController.text.trim());
                       if (context.mounted) Navigator.pop(context);
                       await _load();
                     },
@@ -949,7 +989,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
   Future<void> _markLearned() async {
     if (_learned) return;
     await ProgressStore.markLearned(widget.animal.nameAr);
-    await ProgressStore.addStars(1);
+    await ProgressStore.awardStarsOnce('animal_${widget.animal.nameAr}', 1);
     if (mounted) setState(() => _learned = true);
     await AppSound.instance.praise();
   }
@@ -1289,7 +1329,7 @@ class _DhikrCounterState extends State<_DhikrCounter> {
     setState(() => _count = next);
     if (next >= _target) {
       await ProgressStore.markReligion(_key);
-      await ProgressStore.addStars(1);
+      await ProgressStore.awardStarsOnce(_key, 1);
       if (mounted) setState(() => _done = true);
       await AppSound.instance.praise();
     }
@@ -1772,9 +1812,7 @@ class GamesScreen extends StatelessWidget {
                 color: Colors.cyan,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const DiamondGameScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const DiamondGameScreen()),
                 ),
               ),
             ),
@@ -1832,7 +1870,7 @@ class _GuessSoundGameState extends State<GuessSoundGame> {
 
   Future<void> _choose(Animal a) async {
     if (a == _answer) {
-      await ProgressStore.addStars(1);
+      await ProgressStore.awardStarsOnce('game_guess_sound_win', 1);
       setState(() {
         _score++;
         _message = 'صح! هذا هو ${_answer.nameAr}';
@@ -1994,7 +2032,7 @@ class _GuessPictureGameState extends State<GuessPictureGame> {
 
   Future<void> _choose(Animal a) async {
     if (a == _answer) {
-      await ProgressStore.addStars(1);
+      await ProgressStore.awardStarsOnce('game_guess_picture_win', 1);
       setState(() {
         _score++;
         _message = 'صح! أحسنت';
@@ -2118,7 +2156,7 @@ class _MemoryGameState extends State<MemoryGame> {
       });
       await AppSound.instance.praise(_pairs);
       if (_pairs == 4) {
-        await ProgressStore.addStars(2);
+        await ProgressStore.awardStarsOnce('game_memory_win', 2);
         if (!mounted) return;
         await AppSound.instance.speak('رائع! أكملت لعبة الذاكرة!');
         setState(_setup);
@@ -2275,8 +2313,7 @@ class _DiamondGameScreenState extends State<DiamondGameScreen> {
                 itemBuilder: (context, i) {
                   final lv = diamondLevels[i];
                   final open = lv.level <= _unlocked;
-                  final done =
-                      (_best[lv.level] ?? 0) >= lv.target;
+                  final done = (_best[lv.level] ?? 0) >= lv.target;
                   return ElevatedButton(
                     onPressed: open
                         ? () => Navigator.push(
@@ -2456,7 +2493,7 @@ class _DiamondLevelScreenState extends State<DiamondLevelScreen> {
     _timer?.cancel();
     await ProgressStore.saveDiamondBest(widget.level, _eaten);
     if (won) {
-      await ProgressStore.addStars(1);
+      await ProgressStore.awardStarsOnce('diamond_level_${widget.level}', 1);
       if (widget.level < diamondLevels.length) {
         await ProgressStore.unlockDiamondLevel(widget.level + 1);
       }
@@ -2554,8 +2591,7 @@ class _DiamondLevelScreenState extends State<DiamondLevelScreen> {
                           GestureDetector(
                             onTap: () => setState(
                               () => _animalIndex =
-                                  (_animalIndex + 1) %
-                                  diamondAnimals.length,
+                                  (_animalIndex + 1) % diamondAnimals.length,
                             ),
                             child: Text(
                               diamondAnimals[_animalIndex],
@@ -2564,10 +2600,7 @@ class _DiamondLevelScreenState extends State<DiamondLevelScreen> {
                           ),
                           const Text(
                             'اضغط على الحيوان لتغييره',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 18, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -3045,7 +3078,7 @@ class _ArabicLetterDetailScreenState extends State<ArabicLetterDetailScreen> {
   Future<void> _markLearned() async {
     if (_learned) return;
     await ProgressStore.markReligion('letter_ar_${widget.letter.letter}');
-    await ProgressStore.addStars(1);
+    await ProgressStore.awardStarsOnce('letter_ar_${widget.letter.letter}', 1);
     if (mounted) setState(() => _learned = true);
     await AppSound.instance.praise();
   }
@@ -3309,7 +3342,7 @@ class _EnglishLetterDetailScreenState extends State<EnglishLetterDetailScreen> {
   Future<void> _markLearned() async {
     if (_learned) return;
     await ProgressStore.markReligion('letter_en_${widget.letter.letter}');
-    await ProgressStore.addStars(1);
+    await ProgressStore.awardStarsOnce('letter_en_${widget.letter.letter}', 1);
     if (mounted) setState(() => _learned = true);
     await AppSound.instance.praise();
   }
@@ -3502,7 +3535,7 @@ class _NumberDetailScreenState extends State<NumberDetailScreen> {
   Future<void> _markLearned() async {
     if (_learned) return;
     await ProgressStore.markReligion('number_${widget.number.value}');
-    await ProgressStore.addStars(1);
+    await ProgressStore.awardStarsOnce('number_${widget.number.value}', 1);
     if (mounted) setState(() => _learned = true);
     await AppSound.instance.praise();
   }
@@ -3657,7 +3690,7 @@ class _CountingGameScreenState extends State<CountingGameScreen> {
 
   Future<void> _choose(int v) async {
     if (v == _target) {
-      await ProgressStore.addStars(1);
+      await ProgressStore.awardStarsOnce('game_counting_win', 1);
       setState(() {
         _score++;
         _message = 'صح! العدد هو $_target';
@@ -3866,7 +3899,10 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
     setState(() => _learned.add(index));
     if (!_starred.contains(index)) {
       _starred.add(index);
-      await ProgressStore.addStars(1);
+      await ProgressStore.awardStarsOnce(
+        'surah_${widget.surah.number}_ayah_$index',
+        1,
+      );
     }
     if (_learned.length == widget.surah.ayahs.length) {
       await ProgressStore.markReligion('memorize_${widget.surah.number}');
@@ -4363,7 +4399,7 @@ class _BedtimeStoryDetailScreenState extends State<BedtimeStoryDetailScreen> {
   Future<void> _markListened() async {
     if (_listened) return;
     await ProgressStore.markReligion('story_bed_${widget.story.title}');
-    await ProgressStore.addStars(1);
+    await ProgressStore.awardStarsOnce('story_bed_${widget.story.title}', 1);
     if (mounted) setState(() => _listened = true);
     await AppSound.instance.praise();
   }
@@ -4665,6 +4701,8 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
   double _volume = 1.0;
   int _stars = 0;
   String _childName = ChildProfile.defaultChild;
+  final TextEditingController _importController = TextEditingController();
+  String _backupMessage = '';
 
   @override
   void initState() {
@@ -4678,6 +4716,12 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
     ChildProfile.currentChild().then(
       (name) => mounted ? setState(() => _childName = name) : null,
     );
+  }
+
+  @override
+  void dispose() {
+    _importController.dispose();
+    super.dispose();
   }
 
   Future<void> _resetProgress() async {
@@ -4715,6 +4759,67 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
         .showSnackBar(const SnackBar(content: Text('تمت إعادة ضبط التقدم')));
   }
 
+  Future<void> _exportBackup() async {
+    final json = await BackupService.exportJson();
+    await Clipboard.setData(ClipboardData(text: json));
+    if (!mounted) return;
+    setState(() {
+      _backupMessage =
+          'تم نسخ النسخة الاحتياطية (${json.length} حرفاً). الصقها في ملاحظة آمنة واحتفظ بها — بها تقدم كل الأطفال.';
+    });
+  }
+
+  Future<void> _restoreBackup() async {
+    if (_importController.text.trim().isEmpty) {
+      setState(
+        () => _backupMessage = 'الصق نص النسخة الاحتياطية في المربع أولاً.',
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'استعادة نسخة احتياطية؟',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'ستُكتب قيم النسخة فوق التقدم الحالي. القيم غير الموجودة في النسخة تبقى كما هي. هل أنت متأكد؟',
+          style: TextStyle(fontSize: 20),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء', style: TextStyle(fontSize: 20)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'نعم، استعد',
+              style: TextStyle(fontSize: 20, color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final result = await BackupService.importJson(_importController.text);
+    if (!mounted) return;
+    if (result.ok) {
+      _importController.clear();
+      final stars = await ProgressStore.stars();
+      final name = await ChildProfile.currentChild();
+      if (!mounted) return;
+      setState(() {
+        _stars = stars;
+        _childName = name;
+        _backupMessage = 'تمت الاستعادة: ${result.restored} قيمة.';
+      });
+    } else {
+      setState(() => _backupMessage = result.error ?? 'تعذرت الاستعادة.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -4729,97 +4834,183 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
         foregroundColor: Colors.white,
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.volume_up, size: 30, color: Colors.brown),
-                        SizedBox(width: 8),
-                        Text(
-                          'مستوى الصوت',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.volume_up, size: 30, color: Colors.brown),
+                          SizedBox(width: 8),
+                          Text(
+                            'مستوى الصوت',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Slider(
-                      value: _volume,
-                      min: 0,
-                      max: 1,
-                      divisions: 10,
-                      label: '${(_volume * 100).round()}%',
-                      onChanged: (v) {
-                        setState(() => _volume = v);
-                        unawaited(AppSound.instance.setVolume(v));
-                      },
-                    ),
-                    Text(
-                      'مستوى الصوت: ${(_volume * 100).round()}%',
-                      style: const TextStyle(fontSize: 20),
-                    ),
-                  ],
+                        ],
+                      ),
+                      Slider(
+                        value: _volume,
+                        min: 0,
+                        max: 1,
+                        divisions: 10,
+                        label: '${(_volume * 100).round()}%',
+                        onChanged: (v) {
+                          setState(() => _volume = v);
+                          unawaited(AppSound.instance.setVolume(v));
+                        },
+                      ),
+                      Text(
+                        'مستوى الصوت: ${(_volume * 100).round()}%',
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.star, size: 30, color: Colors.amber),
-                        SizedBox(width: 8),
-                        Text(
-                          'التقدم',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.star, size: 30, color: Colors.amber),
+                          SizedBox(width: 8),
+                          Text(
+                            'التقدم',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'نجوم $_childName: $_stars',
+                        style: const TextStyle(fontSize: 22),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _resetProgress,
+                        icon: const Icon(Icons.delete_forever, size: 28),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'إعادة ضبط التقدم',
+                            softWrap: false,
+                            style: TextStyle(fontSize: 24),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'نجوم $_childName: $_stars',
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _resetProgress,
-                      icon: const Icon(Icons.delete_forever, size: 28),
-                      label: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'إعادة ضبط التقدم',
-                          softWrap: false,
-                          style: TextStyle(fontSize: 24),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.backup, size: 30, color: Colors.brown),
+                          SizedBox(width: 8),
+                          Text(
+                            'نسخة احتياطية',
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'احفظ تقدم كل الأطفال في نص واحد، والصقه هنا لاستعادته بعد حذف التطبيق أو على جهاز آخر. النسخة تبقى عندك ولا تُرسل لأي مكان.',
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _exportBackup,
+                        icon: const Icon(Icons.copy, size: 28),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'نسخ نسخة احتياطية',
+                            softWrap: false,
+                            style: TextStyle(fontSize: 24),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.brown,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _importController,
+                        maxLines: 4,
+                        textDirection: TextDirection.ltr,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: 'الصق نص النسخة الاحتياطية هنا',
+                          hintStyle: TextStyle(fontSize: 20),
+                        ),
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _restoreBackup,
+                        icon: const Icon(Icons.restore, size: 28),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'استعادة من النسخة',
+                            softWrap: false,
+                            style: TextStyle(fontSize: 24),
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                      if (_backupMessage.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _backupMessage,
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

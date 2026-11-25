@@ -31,6 +31,30 @@ class ProgressStore {
     return v;
   }
 
+  // ---------------- نجمة واحدة لكل إنجاز ----------------
+
+  static const _starredPrefix = 'starred_';
+
+  /// يمنح [n] نجوماً لأول مرة فقط لهذا الإنجاز ([activityId]).
+  /// يعيد true إن مُنحت النجوم الآن، وfalse إن كانت مُنحت من قبل
+  /// (إعادة النشاط نفسه لا تمنح نجوماً جديدة).
+  /// مفتاح الإنجاز يُمسح مع إعادة ضبط التقدم، فيستطيع الطفل
+  /// كسب النجوم من جديد بعد إعادة الضبط.
+  static Future<bool> awardStarsOnce(String activityId, int n) async {
+    final p = await SharedPreferences.getInstance();
+    final key = '${await _prefix()}$_starredPrefix$activityId';
+    if (p.getBool(key) ?? false) return false;
+    await p.setBool(key, true);
+    await addStars(n);
+    return true;
+  }
+
+  /// هل سبق منح نجمة لهذا الإنجاز؟
+  static Future<bool> hasStarFor(String activityId) async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool('${await _prefix()}$_starredPrefix$activityId') ?? false;
+  }
+
   static Future<bool> isLearned(String nameAr) async {
     final p = await SharedPreferences.getInstance();
     return p.getBool('${await _prefix()}$_learnedPrefix$nameAr') ?? false;
