@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'screens/splash_screen.dart';
 import 'services/app_sound.dart';
 import 'services/child_profile.dart';
+import 'services/download_manager.dart';
 import 'services/screen_time.dart';
 
 /// اسم التطبيق الثابت في النظام؛ العنوان داخل الشاشات يتغير مع الطفل.
@@ -14,6 +15,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // ترحيل تقدم النسخ القديمة إلى ملف فارس قبل أي قراءة للتقدم.
   await ChildProfile.migrateLegacyProgress();
+  // تجهيز فهرس التنزيلات المسبقة (بلا انتظار — غيابه يعني البث).
+  unawaited(DownloadManager.instance.init());
   runApp(const FaresAnimalsApp());
 }
 

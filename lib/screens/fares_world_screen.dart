@@ -9,6 +9,7 @@ import '../data/animals.dart';
 import '../services/progress_store.dart';
 import '../widgets/app_footer.dart';
 import '../widgets/big_button.dart';
+import 'region_detail_screen.dart';
 
 class WorldRegion {
   final String id;
@@ -146,7 +147,15 @@ class _FaresWorldScreenState extends State<FaresWorldScreen> {
                       remaining: region.requiredLearned - _learned,
                       onTap: () {
                         if (FaresWorld.isUnlocked(_learned, region)) {
-                          widget.onOpenCategory(region.id);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RegionDetailScreen(
+                                region: region,
+                                onOpenCategory: widget.onOpenCategory,
+                              ),
+                            ),
+                          );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

@@ -13,12 +13,18 @@ import '../widgets/animal_image.dart';
 import '../widgets/app_footer.dart';
 import '../widgets/big_button.dart';
 import 'games/color_game.dart';
+import 'games/coloring_game.dart';
 import 'games/digger_game.dart';
+import 'games/kitchen_game.dart';
 import 'games/letter_game.dart';
 import 'games/missing_number_game.dart';
+import 'games/needs_game.dart';
+import 'games/parts_game.dart';
 import 'games/puzzle_game.dart';
+import 'games/relation_game.dart';
 import 'games/shadow_game.dart';
 import 'games/shape_game.dart';
+import 'games/touch_game.dart';
 import 'learn_screen.dart';
 
 // ---------------- الألعاب ----------------
@@ -209,6 +215,89 @@ class GamesScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => const DiggerLevelSelectScreen(),
                   ),
+                ),
+              ),
+            ),
+            // ---- مكتبة الألعاب التعليمية (P1: ست ألعاب جديدة) ----
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 128,
+              child: BigButton(
+                icon: Icons.brush,
+                label: 'رسام الحيوانات',
+                color: Colors.pink,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ColoringGameScreen(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 128,
+              child: BigButton(
+                icon: Icons.restaurant,
+                label: 'مطبخ فارس',
+                color: Colors.orange,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const KitchenGameScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 128,
+              child: BigButton(
+                icon: Icons.pets,
+                label: 'أجزاء الحيوان',
+                color: Colors.teal,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PartsGameScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 128,
+              child: BigButton(
+                icon: Icons.link,
+                label: 'اكتشف العلاقة',
+                color: Colors.indigo,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const RelationGameScreen(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 128,
+              child: BigButton(
+                icon: Icons.favorite,
+                label: 'ماذا يحتاج الحيوان؟',
+                color: Colors.green,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NeedsGameScreen()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 128,
+              child: BigButton(
+                icon: Icons.touch_app,
+                label: 'المس واكتشف',
+                color: Colors.cyan,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TouchGameScreen()),
                 ),
               ),
             ),

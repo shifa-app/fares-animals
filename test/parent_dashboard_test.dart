@@ -45,7 +45,7 @@ void main() {
     await ProgressStore.markLearned('أسد');
     final skills = await skillProgress('فارس');
     expect(skills['الحيوانات'], (1, 100));
-    expect(skills['القرآن'], (0, 21));
+    expect(skills['القرآن'], (0, 38));
     final other = await skillProgress('فهد');
     expect(other['الحيوانات'], (0, 100));
   });
@@ -53,7 +53,7 @@ void main() {
   test('المهارات المتقنة 80% فأكثر، والمراجعة أقل من 50%', () {
     const skills = <String, (int, int)>{
       'الحيوانات': (90, 100),
-      'القرآن': (5, 21),
+      'القرآن': (5, 38),
       'الأرقام': (20, 20),
     };
     expect(masteredSkills(skills), ['الحيوانات', 'الأرقام']);

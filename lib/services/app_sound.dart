@@ -16,6 +16,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 
 import '../data/animals.dart';
 import 'child_profile.dart';
+import 'download_manager.dart';
 import 'progress_store.dart';
 
 class AppSound {
@@ -157,12 +158,17 @@ class AppSound {
 
   /// يشغّل صوت الحيوان الحقيقي فقط إن وجد.
   /// يرجع false دون أي نطق آلي إن كان soundUrl فارغاً أو فشل التشغيل.
+  /// التنزيل المسبق (2.0-beta): إن كان الصوت منزّلاً محلياً يُشغَّل
+  /// من الملف، وإلا يُبث من الشبكة كما قبل.
   Future<bool> playAnimalSound(Animal a) async {
     if (_disposed) return false;
     if (!a.hasRealSound) return false;
     await stopAll();
     await _loadVolume();
-    final ok = await _playOnce(a.soundUrl);
+    final localPath = DownloadManager.instance.localSoundPath(a.soundUrl);
+    final ok = localPath != null
+        ? await _playOnce(DeviceFileSource(localPath))
+        : await _playOnce(UrlSource(a.soundUrl));
     return ok;
   }
 
@@ -188,14 +194,14 @@ class AppSound {
     }
   }
 
-  /// يشغّل رابطاً واحداً حتى نهايته (أو حتى إيقافه)، ويرجع نجاح التشغيل.
-  Future<bool> _playOnce(String url) async {
+  /// يشغّل مصدراً واحداً حتى نهايته (أو حتى إيقافه)، ويرجع نجاح التشغيل.
+  Future<bool> _playOnce(Source source) async {
     if (_disposed) return false;
     final gen = _generation;
     _isPlaying = true;
     try {
       await _audio.setVolume(_volume);
-      await _audio.play(UrlSource(url));
+      await _audio.play(source);
       try {
         await _audio.onPlayerComplete.first.timeout(
           const Duration(seconds: 90),
@@ -221,7 +227,7 @@ class AppSound {
     final gen = _generation;
     for (var i = 0; i < count; i++) {
       if (gen != _generation || _disposed) break;
-      await _playOnce(url);
+      await _playOnce(UrlSource(url));
     }
     _isPlaying = false;
   }
@@ -241,7 +247,7 @@ class AppSound {
         }
         if (url.isEmpty) continue;
         if (!await _urlOk(url)) continue;
-        await _playOnce(url);
+        await _playOnce(UrlSource(url));
       }
     }
     _isPlaying = false;

@@ -145,8 +145,8 @@ void main() {
   });
 
   group('quran memorization data', () {
-    test('21 short surahs with 155 ayahs and verse audio urls', () {
-      expect(memorizeSurahs.length, 21);
+    test('38 surahs (Al-Fatiha + full Juz Amma) with 571 ayahs and verse audio urls', () {
+      expect(memorizeSurahs.length, 38);
       var total = 0;
       for (final s in memorizeSurahs) {
         expect(s.ayahs.isNotEmpty, true, reason: s.name);
@@ -160,7 +160,7 @@ void main() {
           total++;
         }
       }
-      expect(total, 155);
+      expect(total, 571);
       expect(memorizeSurahs.first.number, 1);
       expect(memorizeSurahs.last.number, 114);
     });

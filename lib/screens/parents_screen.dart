@@ -13,6 +13,7 @@ import '../services/parent_dashboard.dart';
 import '../services/progress_store.dart';
 import '../services/screen_time.dart';
 import '../widgets/app_footer.dart';
+import '../widgets/offline_downloads_card.dart';
 import 'terms_screen.dart';
 
 /// بوابة بسيطة بسؤال حسابي، تفتح إعدادات الوالدين.
@@ -1095,6 +1096,8 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              const OfflineDownloadsCard(),
               const SizedBox(height: 16),
               Card(
                 child: Padding(

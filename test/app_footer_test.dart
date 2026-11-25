@@ -1,3 +1,4 @@
+import 'package:animals/app_version.dart';
 import 'package:animals/widgets/app_footer.dart';
 import 'package:animals/services/child_profile.dart';
 import 'package:material_ui/material_ui.dart';
@@ -20,7 +21,7 @@ void main() {
       find.text('إهداء إلى ابني حبيبي فارس اسامة ابراهيم عبدالحكيم'),
       findsOneWidget,
     );
-    expect(find.text('الإصدار 1.1.1'), findsOneWidget);
+    expect(find.text('الإصدار $appVersion'), findsOneWidget);
   });
 
   testWidgets('الفوتر يتبع الطفل الحالي', (tester) async {
@@ -61,6 +62,6 @@ void main() {
         .fontSize!;
     expect(bigSize, greaterThan(smallSize));
     expect(find.text('جميع الحقوق محفوظة © فارس والحيوانات'), findsOneWidget);
-    expect(find.text('الإصدار 1.1.1'), findsOneWidget);
+    expect(find.text('الإصدار $appVersion'), findsOneWidget);
   });
 }

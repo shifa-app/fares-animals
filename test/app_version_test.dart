@@ -10,13 +10,13 @@ void main() {
   test('appVersion matches the versionName in pubspec.yaml', () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final match = RegExp(
-      r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+',
+      r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)\+',
       multiLine: true,
     ).firstMatch(pubspec);
     expect(
       match,
       isNotNull,
-      reason: 'pubspec.yaml must declare version: X.Y.Z+N',
+      reason: 'pubspec.yaml must declare version: X.Y.Z[-pre]+N',
     );
     expect(appVersion, match!.group(1));
   });

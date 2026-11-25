@@ -1,10 +1,12 @@
 // تحفيظ القرآن — نُقلت من lib/main.dart دون تغيير (المرحلة الثانية 2.3).
 import 'package:material_ui/material_ui.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../data/quran.dart';
 import '../services/app_sound.dart';
 import '../services/child_profile.dart';
 import '../services/progress_store.dart';
+import '../services/tasmee_matcher.dart';
 import '../widgets/app_footer.dart';
 
 // ---------------- تحفيظ القرآن ----------------
@@ -106,6 +108,12 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
   final Set<int> _learned = {};
   final Set<int> _starred = {};
 
+  // التسميع بالميكروفون: نفس حزمة شاشة الحيوانات وإذنها، بلا جديد.
+  final SpeechToText _speech = SpeechToText();
+  bool _listening = false;
+  String? _tasmeeMessage;
+  int _mismatchIndex = -1;
+
   Future<void> _playAyah(MemorizeAyah a, {int repeat = 1}) async {
     await AppSound.instance.playUrl(a.audioUrl, repeat: repeat);
   }
@@ -137,8 +145,105 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
     }
   }
 
+  /// تسميع صحيح: نجمة الآية + تشجيع باسم الطفل + الانتقال للتالية.
+  Future<void> _onTasmeeGood() async {
+    final last = _current == widget.surah.ayahs.length - 1;
+    if (!last) {
+      final childName = await ChildProfile.currentChild();
+      await AppSound.instance.speak('أحسنت يا $childName!');
+    }
+    await _markAyah(_current);
+    if (!mounted) return;
+    setState(() {
+      _mismatchIndex = -1;
+      _tasmeeMessage = null;
+      if (!last) {
+        _current++;
+      } else {
+        _tasmee = false;
+      }
+    });
+  }
+
+  /// تسميع ناقص: إبراز أول كلمة لم تُطابق بلون لطيف، ثم تشجيع
+  /// باسم الطفل وإعادة تلاوة الآية تلقائياً، والبقاء على نفس الآية.
+  Future<void> _onTasmeeRetry(TasmeeResult result) async {
+    final childName = await ChildProfile.currentChild();
+    if (!mounted) return;
+    setState(() {
+      _mismatchIndex = result.firstMismatchIndex;
+      _tasmeeMessage = 'قربت يا $childName! لنسمعها معاً ثم جرّب ثانية';
+    });
+    await AppSound.instance.speak(
+      'قربت يا $childName! لنسمعها معاً ثم جرّب ثانية',
+    );
+    if (!mounted) return;
+    await _playAyah(widget.surah.ayahs[_current]);
+  }
+
+  /// زر الميكروفون: يوقف أي تلاوة أولاً، ثم يسمع الطفل ويطابق
+  /// نطقه بالآية الحالية مطابقة مرنة تتجاهل التشكيل.
+  Future<void> _listenTasmee() async {
+    await AppSound.instance.stopAll();
+    final available = await _speech.initialize();
+    if (!available) {
+      if (!mounted) return;
+      setState(
+        () => _tasmeeMessage =
+            'الميكروفون غير متاح — زر «كررتها!» يعمل دون إنترنت.',
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _listening = true;
+      _mismatchIndex = -1;
+      _tasmeeMessage = 'أنا أسمعك... اقرأ الآية بصوتك!';
+    });
+    await _speech.listen(
+      listenOptions: SpeechListenOptions(
+        localeId: 'ar_EG',
+        listenFor: Duration(seconds: 20),
+      ),
+      onResult: (result) async {
+        if (!result.finalResult || !mounted) return;
+        setState(() => _listening = false);
+        final match = matchRecitation(
+          result.recognizedWords,
+          widget.surah.ayahs[_current].text,
+        );
+        if (match.isGood) {
+          await _onTasmeeGood();
+        } else {
+          await _onTasmeeRetry(match);
+        }
+      },
+    );
+  }
+
+  /// نص الآية في وضع التسميع مع إبراز الكلمة المخطئة بلون لطيف.
+  Widget _tasmeeAyahText() {
+    final words = ayahWords(widget.surah.ayahs[_current].text);
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        style: const TextStyle(fontSize: 32, height: 2.0, color: Colors.black),
+        children: [
+          for (var i = 0; i < words.length; i++)
+            TextSpan(
+              text: '${words[i].original} ',
+              style: _mismatchIndex == i
+                  ? TextStyle(backgroundColor: Colors.amber.shade200)
+                  : null,
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    _speech.stop();
     AppSound.instance.stopAll();
     super.dispose();
   }
@@ -157,10 +262,16 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
         foregroundColor: Colors.white,
         actions: [
           TextButton(
-            onPressed: () => setState(() {
-              _tasmee = !_tasmee;
-              _current = 0;
-            }),
+            onPressed: () {
+              _speech.stop();
+              setState(() {
+                _tasmee = !_tasmee;
+                _current = 0;
+                _listening = false;
+                _mismatchIndex = -1;
+                _tasmeeMessage = null;
+              });
+            },
             child: Text(
               _tasmee ? 'كل الآيات' : 'وضع التسميع',
               style: const TextStyle(
@@ -383,9 +494,10 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
               )
             else
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                     Text(
                       'الآية ${_current + 1} من ${s.ayahs.length}',
                       style: const TextStyle(
@@ -397,11 +509,7 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
-                        child: Text(
-                          s.ayahs[_current].text,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 32, height: 2.0),
-                        ),
+                        child: _tasmeeAyahText(),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -411,7 +519,9 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
-                      onPressed: () => _playAyah(s.ayahs[_current]),
+                      onPressed: _listening
+                          ? null
+                          : () => _playAyah(s.ayahs[_current]),
                       icon: const Icon(Icons.play_arrow, size: 36),
                       label: const Text(
                         'استمع للآية',
@@ -428,13 +538,55 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
+                      onPressed: _listening ? null : _listenTasmee,
+                      icon: Icon(
+                        _listening ? Icons.mic : Icons.mic_none,
+                        size: 36,
+                      ),
+                      label: Text(
+                        _listening ? 'أنا أسمعك...' : 'سمّع بصوتك 🎤',
+                        style: const TextStyle(fontSize: 26),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            _listening ? Colors.red : Colors.deepOrange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 28,
+                        ),
+                      ),
+                    ),
+                    if (_tasmeeMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _tasmeeMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.brown,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
                       onPressed: () async {
+                        _speech.stop();
                         await _markAyah(_current);
                         if (!mounted) return;
                         if (_current < s.ayahs.length - 1) {
-                          setState(() => _current++);
+                          setState(() {
+                            _current++;
+                            _mismatchIndex = -1;
+                            _tasmeeMessage = null;
+                          });
                         } else {
-                          setState(() => _tasmee = false);
+                          setState(() {
+                            _tasmee = false;
+                            _mismatchIndex = -1;
+                            _tasmeeMessage = null;
+                          });
                         }
                       },
                       icon: const Icon(Icons.check, size: 36),
@@ -453,6 +605,7 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
                     ),
                   ],
                 ),
+              ),
               ),
           ],
         ),

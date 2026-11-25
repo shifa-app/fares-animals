@@ -180,10 +180,60 @@ const List<BadgeDef> badgeDefs = [
     requirement: 'أكمل لعبة أحجية الحيوانات',
     icon: Icons.extension,
   ),
+  BadgeDef(
+    id: 'game_g08',
+    label: 'رسام الحيوانات',
+    requirement: 'لوّن أول صفحة تلوين',
+    icon: Icons.brush,
+  ),
+  BadgeDef(
+    id: 'game_g09',
+    label: 'طباخ فارس',
+    requirement: 'أكمل لعبة مطبخ فارس',
+    icon: Icons.restaurant,
+  ),
+  BadgeDef(
+    id: 'game_g10',
+    label: 'خبير الأجزاء',
+    requirement: 'أكمل لعبة أجزاء الحيوان',
+    icon: Icons.pets,
+  ),
+  BadgeDef(
+    id: 'game_g11',
+    label: 'مكتشف العلاقات',
+    requirement: 'أكمل لعبة اكتشف العلاقة',
+    icon: Icons.link,
+  ),
+  BadgeDef(
+    id: 'game_g12',
+    label: 'صديق الحيوان',
+    requirement: 'أكمل لعبة ماذا يحتاج الحيوان؟',
+    icon: Icons.favorite,
+  ),
+  BadgeDef(
+    id: 'game_g13',
+    label: 'سريع الملاحظة',
+    requirement: 'أكمل لعبة المس واكتشف',
+    icon: Icons.touch_app,
+  ),
 ];
 
-/// معرّفات ألعاب P0 السبع (لمفاتيح النجوم والأوسمة).
-const List<String> gameIds = ['g01', 'g02', 'g03', 'g04', 'g05', 'g06', 'g07'];
+/// معرّفات ألعاب P0 السبع + P1 الست (لمفاتيح النجوم والأوسمة).
+const List<String> gameIds = [
+  'g01',
+  'g02',
+  'g03',
+  'g04',
+  'g05',
+  'g06',
+  'g07',
+  'g08',
+  'g09',
+  'g10',
+  'g11',
+  'g12',
+  'g13',
+];
 
 /// مفاتيح مجموعات الاختبار (بيئية 7 + علمية 8 = 15).
 const List<String> quizGroupKeys = [

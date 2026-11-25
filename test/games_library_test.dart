@@ -1,5 +1,5 @@
-// مكتبة الألعاب: الألعاب السبع الجديدة مربوطة في قسم «الألعاب»
-// وتفتح شاشاتها من أزرارها، مع بقاء الألعاب الأربع القديمة.
+// مكتبة الألعاب: الألعاب الجديدة (P0 السبع + P1 الست) مربوطة في
+// قسم «الألعاب» وتفتح شاشاتها من أزرارها، مع بقاء الألعاب الأربع القديمة.
 import 'package:animals/screens/games_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +58,12 @@ void main() {
       'أكمل الرقم الناقص',
       'أحجية الحيوانات',
       'حفّار الماس ⛏️',
+      'رسام الحيوانات',
+      'مطبخ فارس',
+      'أجزاء الحيوان',
+      'اكتشف العلاقة',
+      'ماذا يحتاج الحيوان؟',
+      'المس واكتشف',
     ]) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
@@ -81,5 +87,15 @@ void main() {
       find.textContaining('أحجية الحيوانات — الجولة 1 من 5'),
       findsOneWidget,
     );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await openGame(tester, 'مطبخ فارس');
+    expect(find.textContaining('مطبخ فارس — الجولة 1 من 5'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await openGame(tester, 'المس واكتشف');
+    expect(find.textContaining('المس واكتشف — الجولة 1 من 5'), findsOneWidget);
   });
 }

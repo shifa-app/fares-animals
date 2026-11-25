@@ -100,6 +100,190 @@ const List<(String, String)> gameShapes = [
   ('oval', 'البيضاوي'),
 ];
 
+/// G09 مطبخ فارس: طعام (اسم + إيموجي) ووجبات بمكوناتها.
+class KitchenFood {
+  final String name;
+  final String emoji;
+  const KitchenFood(this.name, this.emoji);
+}
+
+const List<KitchenFood> kitchenFoods = [
+  KitchenFood('تفاح', '🍎'),
+  KitchenFood('موز', '🍌'),
+  KitchenFood('عنب', '🍇'),
+  KitchenFood('خبز', '🍞'),
+  KitchenFood('جبن', '🧀'),
+  KitchenFood('طماطم', '🍅'),
+  KitchenFood('جزر', '🥕'),
+  KitchenFood('بطاطس', '🥔'),
+  KitchenFood('بصل', '🧅'),
+  KitchenFood('ماء', '💧'),
+  KitchenFood('برتقال', '🍊'),
+  KitchenFood('فراولة', '🍓'),
+  KitchenFood('مانجو', '🥭'),
+  KitchenFood('عجينة', '🫓'),
+  KitchenFood('زيتون', '🫒'),
+  KitchenFood('فلفل', '🫑'),
+  KitchenFood('دقيق', '🌾'),
+  KitchenFood('بيض', '🥚'),
+  KitchenFood('سكر', '🍬'),
+  KitchenFood('حليب', '🥛'),
+  KitchenFood('لحم', '🍖'),
+  KitchenFood('سمك', '🐟'),
+  KitchenFood('أرز', '🍚'),
+  KitchenFood('عسل', '🍯'),
+];
+
+class KitchenMeal {
+  final String name;
+  final String emoji;
+  final List<String> ingredients;
+  const KitchenMeal(this.name, this.emoji, this.ingredients);
+}
+
+const List<KitchenMeal> kitchenMeals = [
+  KitchenMeal('سلطة فواكه', '🥗', ['تفاح', 'موز', 'عنب']),
+  KitchenMeal('ساندويتش', '🥪', ['خبز', 'جبن', 'طماطم']),
+  KitchenMeal('حساء الخضار', '🍲', ['جزر', 'بطاطس', 'بصل', 'ماء']),
+  KitchenMeal('عصير الفواكه', '🧃', ['برتقال', 'فراولة', 'مانجو']),
+  KitchenMeal('بيتزا', '🍕', ['عجينة', 'جبن', 'طماطم', 'زيتون']),
+  KitchenMeal('كيك', '🍰', ['دقيق', 'بيض', 'سكر', 'حليب']),
+];
+
+/// G10 أجزاء الحيوان: الجزء + أيقونته + شرح وظيفته بلغة مبسطة.
+class AnimalPart {
+  final String key;
+  final String name;
+  final IconData icon;
+  final String function;
+  const AnimalPart(this.key, this.name, this.icon, this.function);
+}
+
+const List<AnimalPart> animalParts = [
+  AnimalPart(
+    'head',
+    'الرأس',
+    Icons.face,
+    'فيه العينان والأذنان والفم، وبه يرى الحيوان ويسمع ويأكل.',
+  ),
+  AnimalPart(
+    'body',
+    'الجسم',
+    Icons.accessibility_new,
+    'يحمي أعضاء الحيوان الداخلية، وفيه قلبه ورئتاه.',
+  ),
+  AnimalPart(
+    'legs',
+    'الأرجل',
+    Icons.directions_walk,
+    'يمشي بها الحيوان ويجري ويقفز.',
+  ),
+  AnimalPart(
+    'tail',
+    'الذيل',
+    Icons.gesture,
+    'يساعده على التوازن ويطرد الحشرات.',
+  ),
+];
+
+/// G12 ماذا يحتاج الحيوان؟: موقف + الاحتياج + تفسيره المبسط.
+class AnimalNeed {
+  final String animal;
+  final String emoji;
+  final String situation;
+  final String need;
+  final String why;
+  const AnimalNeed(
+    this.animal,
+    this.emoji,
+    this.situation,
+    this.need,
+    this.why,
+  );
+}
+
+const List<AnimalNeed> animalNeeds = [
+  AnimalNeed(
+    'الأسد',
+    '🦁',
+    'الأسد عطشان بعد الجري في الشمس!',
+    'ماء',
+    'الماء يجعل جسم الأسد قوياً وصحياً.',
+  ),
+  AnimalNeed(
+    'الأرنب',
+    '🐰',
+    'الأرنب جائع ويريد أن يأكل!',
+    'طعام',
+    'الجزر والأعشاب طعام الأرنب المفضل.',
+  ),
+  AnimalNeed(
+    'العصفور',
+    '🐦',
+    'العصفور متعب ويريد أن ينام!',
+    'نوم',
+    'النوم يجعل العصفور نشيطاً في الصباح.',
+  ),
+  AnimalNeed(
+    'الفيل',
+    '🐘',
+    'الفيل وسخ بعد اللعب في الطين!',
+    'استحمام',
+    'الماء ينظف جلد الفيل ويجعله سعيداً.',
+  ),
+  AnimalNeed(
+    'القطة',
+    '🐱',
+    'القطة بردانة في الشتاء!',
+    'دفء',
+    'الدفء يحمي القطة من البرد والمرض.',
+  ),
+  AnimalNeed(
+    'الكلب',
+    '🐶',
+    'الكلب يريد أن يلعب معك!',
+    'لعب',
+    'اللعب يجعل الكلب سعيداً وصحياً.',
+  ),
+  AnimalNeed(
+    'السمكة',
+    '🐟',
+    'السمكة خارج الماء ولا تستطيع التنفس!',
+    'ماء',
+    'السمكة تتنفس تحت الماء فقط.',
+  ),
+  AnimalNeed(
+    'الدجاجة',
+    '🐔',
+    'الدجاجة جائعة وتريد أن تأكل!',
+    'طعام',
+    'الحبوب طعام الدجاجة المفضل.',
+  ),
+];
+
+/// أسماء الاحتياجات وإيموجي كل منها (لخيارات G12).
+const List<String> animalNeedNames = [
+  'ماء',
+  'طعام',
+  'نوم',
+  'استحمام',
+  'دفء',
+  'لعب',
+  'بيت',
+  'دواء',
+];
+
+const Map<String, String> animalNeedEmojis = {
+  'ماء': '💧',
+  'طعام': '🥕',
+  'نوم': '😴',
+  'استحمام': '🛁',
+  'دفء': '🧣',
+  'لعب': '⚽',
+  'بيت': '🏠',
+  'دواء': '💊',
+};
+
 class GameEngine {
   // ---------------- بناء الجولات (دوال نقية) ----------------
 
@@ -337,6 +521,193 @@ class GameEngine {
           options: options,
           correct: {options.indexOf('${animal.nameAr}:$missing')},
           payload: '${animal.nameAr}:$grid:$missing',
+        ),
+      );
+    }
+    return rounds;
+  }
+
+  /// G09 مطبخ فارس: وجبة + مكوناتها بين خيارات؛ على الطفل
+  /// اصطياد كل مكونات الوجبة (بلا خصم عند الخطأ).
+  static List<GameRound> buildKitchenRounds({
+    GameDifficulty difficulty = GameDifficulty.easy,
+    int count = 5,
+    int? seed,
+  }) {
+    final rnd = Random(seed);
+    final optionCount = switch (difficulty) {
+      GameDifficulty.easy => 5,
+      GameDifficulty.medium => 6,
+      GameDifficulty.hard => 7,
+      GameDifficulty.expert => 8,
+    };
+    final pool = kitchenMeals.toList()..shuffle(rnd);
+    final rounds = <GameRound>[];
+    for (var i = 0; i < count; i++) {
+      final meal = pool[i % pool.length];
+      final ingredients = meal.ingredients.toList();
+      final others = kitchenFoods
+          .where((f) => !meal.ingredients.contains(f.name))
+          .toList()
+        ..shuffle(rnd);
+      final options = [
+        ...ingredients,
+        ...others.take(optionCount - ingredients.length).map((f) => f.name),
+      ]..shuffle(rnd);
+      final correct = {
+        for (var j = 0; j < options.length; j++)
+          if (meal.ingredients.contains(options[j])) j,
+      };
+      rounds.add(
+        GameRound(
+          question: 'ما مكونات ${meal.name}؟',
+          options: options,
+          correct: correct,
+          payload: meal.name,
+        ),
+      );
+    }
+    return rounds;
+  }
+
+  /// G10 أجزاء الحيوان: حيوان + جزء مطلوب (رأس/جسم/أرجل/ذيل)؛
+  /// على الطفل الضغط على اسم الجزء الصحيح.
+  /// الحمولة «اسم الحيوان:مفتاح الجزء» لشرح وظيفته بعد الإجابة.
+  static List<GameRound> buildPartsRounds({
+    GameDifficulty difficulty = GameDifficulty.easy,
+    int count = 5,
+    int? seed,
+  }) {
+    final rnd = Random(seed);
+    // الحيوانات المألوفة للصغار: أسماء الظلال الثمانية؛ و«سلحفاة»
+    // اسمها الكامل في الموسوعة «سلحفاة بحرية» فيُبحث عنها جزئياً.
+    final familiar = shadowAnimals.map((s) {
+      for (final a in animals) {
+        if (a.nameAr == s.name) return a;
+      }
+      return animals.firstWhere((a) => a.nameAr.contains(s.name));
+    }).toList();
+    final pool =
+        (difficulty.index >= GameDifficulty.hard.index
+                ? animals.toList()
+                : familiar)
+            ..shuffle(rnd);
+    final rounds = <GameRound>[];
+    for (var i = 0; i < count; i++) {
+      final animal = pool[i % pool.length];
+      final part = animalParts[rnd.nextInt(animalParts.length)];
+      final options = animalParts.map((p) => p.name).toList()..shuffle(rnd);
+      rounds.add(
+        GameRound(
+          question: 'اضغط على «${part.name}»!',
+          options: options,
+          correct: {options.indexOf(part.name)},
+          payload: '${animal.nameAr}:${part.key}',
+        ),
+      );
+    }
+    return rounds;
+  }
+
+  /// G11 اكتشف العلاقة: حيوان + سؤال عن بيئته أو غذائه؛
+  /// على الطفل اختيار الإجابة المرتبطة به.
+  static List<GameRound> buildRelationRounds({
+    GameDifficulty difficulty = GameDifficulty.easy,
+    int count = 5,
+    int? seed,
+  }) {
+    final rnd = Random(seed);
+    final optionCount = difficulty.index >= GameDifficulty.hard.index ? 4 : 3;
+    final pool = animals.toList()..shuffle(rnd);
+    final homes = animals.map((a) => a.home).toSet().toList();
+    final foods = animals.map((a) => a.food).toSet().toList();
+    final rounds = <GameRound>[];
+    for (var i = 0; i < count; i++) {
+      final animal = pool[i % pool.length];
+      final askHome = rnd.nextBool();
+      final answer = askHome ? animal.home : animal.food;
+      final others = (askHome ? homes : foods)
+          .where((v) => v != answer)
+          .toList()
+        ..shuffle(rnd);
+      final options = [answer, ...others.take(optionCount - 1)]..shuffle(rnd);
+      rounds.add(
+        GameRound(
+          question: askHome
+              ? 'أين يعيش ${animal.nameAr}؟'
+              : 'ماذا يأكل ${animal.nameAr}؟',
+          options: options,
+          correct: {options.indexOf(answer)},
+          payload: animal.nameAr,
+        ),
+      );
+    }
+    return rounds;
+  }
+
+  /// G12 ماذا يحتاج الحيوان؟: موقف تعليمي + احتياج مناسب؛
+  /// على الطفل اختيار الاحتياج الصحيح ثم يسمع تفسيره.
+  /// الحمولة اسم الحيوان (للبحث عن تفسيره).
+  static List<GameRound> buildNeedsRounds({
+    GameDifficulty difficulty = GameDifficulty.easy,
+    int count = 5,
+    int? seed,
+  }) {
+    final rnd = Random(seed);
+    final optionCount = difficulty.index >= GameDifficulty.hard.index ? 4 : 3;
+    final pool = animalNeeds.toList()..shuffle(rnd);
+    final rounds = <GameRound>[];
+    for (var i = 0; i < count; i++) {
+      final scenario = pool[i % pool.length];
+      final others = animalNeedNames
+          .where((n) => n != scenario.need)
+          .toList()
+        ..shuffle(rnd);
+      final options = [scenario.need, ...others.take(optionCount - 1)]
+        ..shuffle(rnd);
+      rounds.add(
+        GameRound(
+          question: scenario.situation,
+          options: options,
+          correct: {options.indexOf(scenario.need)},
+          payload: scenario.animal,
+        ),
+      );
+    }
+    return rounds;
+  }
+
+  /// G13 المس واكتشف: تعليمة صوتية «المس الحيوان!» + شبكة صور؛
+  /// على الطفل لمس صورة الحيوان المطلوب.
+  static List<GameRound> buildTouchRounds({
+    GameDifficulty difficulty = GameDifficulty.easy,
+    int count = 5,
+    int? seed,
+  }) {
+    final rnd = Random(seed);
+    final optionCount = switch (difficulty) {
+      GameDifficulty.easy => 4,
+      GameDifficulty.medium => 6,
+      GameDifficulty.hard => 9,
+      GameDifficulty.expert => 9,
+    };
+    final pool = animals.toList()..shuffle(rnd);
+    final rounds = <GameRound>[];
+    for (var i = 0; i < count; i++) {
+      final answer = pool[i % pool.length];
+      final others = animals
+          .where((a) => a != answer)
+          .map((a) => a.nameAr)
+          .toList()
+        ..shuffle(rnd);
+      final options = [answer.nameAr, ...others.take(optionCount - 1)]
+        ..shuffle(rnd);
+      rounds.add(
+        GameRound(
+          question: 'المس ${answer.nameAr}!',
+          options: options,
+          correct: {options.indexOf(answer.nameAr)},
+          payload: answer.nameAr,
         ),
       );
     }
