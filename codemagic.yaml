@@ -1,0 +1,54 @@
+# Codemagic CI for «فارس والحيوانات» (Flutter, Android only)
+# Trigger: push a tag v* (e.g. v1.0.2) -> builds signed release APKs.
+# Signing: the keystore is uploaded once in Codemagic
+# (Team settings > codemagic.yaml settings > Code signing identities >
+# Android keystores) with reference name `fares-animals-debug-keystore`.
+# The build copies it to android/debug.keystore, which the project's
+# signing config (android/app/build.gradle.kts, pinnedDebug) already
+# reads with the standard debug-keystore passwords — so the SHA-256
+# fingerprint (3F:85:02:BB:57:22:77:52:C1:83:84:B7:A7:71:3D:B1:48:7D:25:2D:8D:A8:E8:08:32:7F:AC:C9:60:13:1B:85)
+# stays the same and users can update the app in place.
+# IMPORTANT: the keystore that signed v1.0.0 (SHA-256 2D:7D:…:4F:92)
+# is lost — it is not on this machine and cannot be recovered.
+# The canonical keystore from v1.0.1 onward is the one above.
+# The keystore file itself is never committed (see .gitignore) —
+# the repo is public.
+#
+# Future releases: bump `version:` in pubspec.yaml, commit, push the
+# tag (e.g. `git tag v1.0.2 && git push origin v1.0.2`), Codemagic
+# builds, then attach the arm64 APK from the build artifacts to the
+# GitHub Release with the same tag — the permanent download link is
+# https://github.com/shifa-app/fares-animals/releases/download/vX.Y.Z/app-arm64-v8a-release.apk
+
+workflows:
+  android-release:
+    name: Android Release
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      java: 17
+      android_signing:
+        - fares-animals-debug-keystore
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'v*'
+          include: true
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Analyze
+        script: flutter analyze
+      - name: Run tests
+        script: flutter test
+      - name: Place signing keystore
+        script: |
+          cp "$CM_KEYSTORE_PATH" android/debug.keystore
+      - name: Build release APKs (split per ABI)
+        script: flutter build apk --release --split-per-abi
+    artifacts:
+      - build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+      - build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+      - build/app/outputs/flutter-apk/app-x86_64-release.apk

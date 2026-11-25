@@ -1,0 +1,67 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Widget Preview related
+.widget_preview/
+
+# Signing keystores must never be committed (the repo is public).
+# The release build signs with the pinned debug keystore in
+# android/debug.keystore — see android/app/build.gradle.kts.
+# That keystore's SHA-256 is 3F:85:02:BB:57:22:77:52:C1:83:84:B7:A7:71:3D:B1:48:7D:25:2D:8D:A8:E8:08:32:7F:AC:C9:60:13:1B:85
+# (the fingerprint that signed v1.0.1); it is uploaded to Codemagic
+# as the signing identity, never committed to git.
+*.keystore
+*.jks
+android/debug.keystore
+key.properties
+
+# Local build caches and staged release files (never committed)
+android/.gradle/
+android/build/
+releases/
+
+# Kotlin build cache (generated)
+android/.kotlin/
