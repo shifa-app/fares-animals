@@ -3,10 +3,14 @@
 // دون استيراد دائري.
 import 'package:material_ui/material_ui.dart';
 
+import '../app_version.dart';
 import '../services/child_profile.dart';
 
 /// سطر الحقوق الثابت في كل الصفحات.
 const String appRightsLine = 'جميع الحقوق محفوظة © فارس والحيوانات';
+
+/// سطر رقم الإصدار — أسفل الإهداء، بخط صغير هادئ.
+const String appVersionLine = 'الإصدار $appVersion';
 
 /// فوتر موحد لكل الصفحات: سطر الحقوق + الإهداء باسم الطفل الحالي.
 /// [AppFooter.big] للرئيسية (الإهداء بخطه الكبير داخل إطاره البرتقالي)،
@@ -60,6 +64,12 @@ class _AppFooterState extends State<AppFooter> {
               ),
               const SizedBox(height: 4),
               const Text(
+                appVersionLine,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 4),
+              const Text(
                 appRightsLine,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Colors.grey),
@@ -89,6 +99,12 @@ class _AppFooterState extends State<AppFooter> {
                 fontWeight: FontWeight.bold,
                 color: Colors.brown,
               ),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              appVersionLine,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: Colors.grey),
             ),
             const SizedBox(height: 2),
             const Text(
