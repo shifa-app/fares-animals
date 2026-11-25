@@ -18,6 +18,11 @@ void main() {
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(const MethodChannel('flutter_tts'), null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugin.csdcorp.com/speech_to_text'),
+          null,
+        );
   });
 
   Future<void> pumpDetail(WidgetTester tester) async {
@@ -50,5 +55,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('الآية 2 من 3'), findsOneWidget);
     expect(find.text('سمّع بصوتك 🎤'), findsOneWidget);
+  });
+
+  testWidgets(
+      'mic button never gets stuck when speech init is unavailable',
+      (tester) async {
+    // قناة speech_to_text ترد بأن التهيئة غير متاحة (إذن مرفوض
+    // أو خدمة تعرف غير موجودة) — كما يحدث على جهاز حقيقي.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugin.csdcorp.com/speech_to_text'),
+          (call) async {
+            if (call.method == 'initialize') return false;
+            return null;
+          },
+        );
+    await pumpDetail(tester);
+    await tester.tap(find.text('وضع التسميع'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('سمّع بصوتك 🎤'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('سمّع بصوتك 🎤'));
+    await tester.pumpAndSettle();
+    // رسالة واضحة، والزر ما زال «سمّع بصوتك» لا «أنا أسمعك...» —
+    // أي لم يعلق في حالة الاستماع، والمسار اليدوي ما زال متاحاً.
+    expect(find.textContaining('الميكروفون غير متاح'), findsOneWidget);
+    expect(find.text('سمّع بصوتك 🎤'), findsOneWidget);
+    expect(find.text('أنا أسمعك...'), findsNothing);
+    expect(find.text('كررتها! التالية'), findsOneWidget);
   });
 }

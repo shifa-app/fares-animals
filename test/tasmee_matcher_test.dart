@@ -92,4 +92,29 @@ void main() {
       expect(words.map((w) => w.normalized).toList(), ['افلا', 'يعلم']);
     });
   });
+
+  group('tasmeeErrorMessage', () {
+    test('permission error points to app settings', () {
+      final msg = tasmeeErrorMessage('error_permission');
+      expect(msg, contains('إذن الميكروفون'));
+      expect(msg, contains('كررتها'));
+    });
+
+    test('network errors say recognition needs internet', () {
+      for (final code in ['error_network', 'error_network_timeout']) {
+        final msg = tasmeeErrorMessage(code);
+        expect(msg, contains('يحتاج إنترنت'));
+        expect(msg, contains('كررتها'));
+      }
+    });
+
+    test('other errors ask the child to try again', () {
+      for (final code in ['error_no_match', 'error_speech_timeout', '']) {
+        expect(
+          tasmeeErrorMessage(code),
+          'لم أسمعك بوضوح — جرّب ثانية يا بطل!',
+        );
+      }
+    });
+  });
 }

@@ -168,3 +168,17 @@ TasmeeResult matchRecitation(String recognized, String ayahText) {
     wordMatches: matches,
   );
 }
+
+/// رسالة لطيفة لطفل حسب سبب خطأ التعرف على الصوت.
+/// رموز الأخطاء كما يرسلها أندرويد عبر حزمة speech_to_text:
+/// ‏error_permission (الإذن مرفوض)، error_network / error_network_timeout
+/// (التعرف يحتاج إنترنت)، وأي رمز آخر (لم يُسمع كلام واضح).
+String tasmeeErrorMessage(String errorMsg) {
+  if (errorMsg == 'error_permission') {
+    return 'إذن الميكروفون مرفوض — فعّله من إعدادات التطبيق، أو استخدم زر «كررتها!»';
+  }
+  if (errorMsg == 'error_network' || errorMsg == 'error_network_timeout') {
+    return 'التعرف على الصوت يحتاج إنترنت — زر «كررتها!» يعمل دون إنترنت.';
+  }
+  return 'لم أسمعك بوضوح — جرّب ثانية يا بطل!';
+}

@@ -1,5 +1,6 @@
 // تحفيظ القرآن — نُقلت من lib/main.dart دون تغيير (المرحلة الثانية 2.3).
 import 'package:material_ui/material_ui.dart';
+import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../data/quran.dart';
@@ -111,6 +112,8 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
   // التسميع بالميكروفون: نفس حزمة شاشة الحيوانات وإذنها، بلا جديد.
   final SpeechToText _speech = SpeechToText();
   bool _listening = false;
+  // هل وصلت نتيجة نهائية في جلسة الاستماع الحالية؟
+  bool _tasmeeHandled = false;
   String? _tasmeeMessage;
   int _mismatchIndex = -1;
 
@@ -183,20 +186,26 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
 
   /// زر الميكروفون: يوقف أي تلاوة أولاً، ثم يسمع الطفل ويطابق
   /// نطقه بالآية الحالية مطابقة مرنة تتجاهل التشكيل.
+  /// لا يعلق أبداً: أي خطأ تعرّف أو توقف بلا نتيجة نهائية
+  /// يعيد الزر لحالته مع رسالة لطيفة توضح السبب.
   Future<void> _listenTasmee() async {
     await AppSound.instance.stopAll();
-    final available = await _speech.initialize();
+    final available = await _speech.initialize(
+      onError: _onSpeechError,
+      onStatus: _onSpeechStatus,
+    );
     if (!available) {
       if (!mounted) return;
       setState(
         () => _tasmeeMessage =
-            'الميكروفون غير متاح — زر «كررتها!» يعمل دون إنترنت.',
+            'الميكروفون غير متاح — فعّل إذن الميكروفون من إعدادات التطبيق، أو استخدم زر «كررتها!» الذي يعمل دون إنترنت.',
       );
       return;
     }
     if (!mounted) return;
     setState(() {
       _listening = true;
+      _tasmeeHandled = false;
       _mismatchIndex = -1;
       _tasmeeMessage = 'أنا أسمعك... اقرأ الآية بصوتك!';
     });
@@ -207,6 +216,7 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
       ),
       onResult: (result) async {
         if (!result.finalResult || !mounted) return;
+        _tasmeeHandled = true;
         setState(() => _listening = false);
         final match = matchRecitation(
           result.recognizedWords,
@@ -219,6 +229,35 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
         }
       },
     );
+    // انتهى الاستماع بلا نتيجة نهائية ولا خطأ: أعد الزر لحالته
+    // حتى لا يبقى معطلاً على «أنا أسمعك...».
+    if (mounted && _listening && !_tasmeeHandled) {
+      setState(() {
+        _listening = false;
+        _tasmeeMessage = 'لم أسمع شيئاً — اضغط الزر وجرّب ثانية';
+      });
+    }
+  }
+
+  /// خطأ تعرّف أثناء التسميع: أوقف حالة الاستماع وأخبر
+  /// الطفل بلطف حسب السبب، ولا تترك الزر معلقاً.
+  void _onSpeechError(SpeechRecognitionError error) {
+    if (!mounted || !_listening) return;
+    setState(() {
+      _listening = false;
+      _tasmeeMessage = tasmeeErrorMessage(error.errorMsg);
+    });
+  }
+
+  /// حالة الاستماع: إن توقف دون نتيجة نهائية، أعد الزر لحالته.
+  void _onSpeechStatus(String status) {
+    if (!mounted || !_listening || _tasmeeHandled) return;
+    if (status == 'notListening') {
+      setState(() {
+        _listening = false;
+        _tasmeeMessage = 'لم أسمع شيئاً — اضغط الزر وجرّب ثانية';
+      });
+    }
   }
 
   /// نص الآية في وضع التسميع مع إبراز الكلمة المخطئة بلون لطيف.
