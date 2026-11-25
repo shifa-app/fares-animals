@@ -28,11 +28,26 @@ HEADERS = {'User-Agent': 'FaresAnimalsDataBot/1.0 (media verification)'}
 
 
 def check_url(url):
-    """Return (status, content_type, size). Follows the HEAD->GET-range fallback."""
+    """Return (status, content_type, size). Follows the HEAD->GET-range fallback.
+
+    Some hosts (e.g. DeadSounds via Cloudflare) answer HEAD with no
+    Content-Length; then a GET measures the real body size instead of
+    failing the >2KB rule on an unknown size.
+    """
     req = urllib.request.Request(url, method='HEAD', headers=HEADERS)
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
-            return r.status, r.headers.get('Content-Type', ''), r.headers.get('Content-Length', '')
+            size = r.headers.get('Content-Length', '')
+            if size:
+                return r.status, r.headers.get('Content-Type', ''), size
+            ctype = r.headers.get('Content-Type', '')
+    except Exception:
+        ctype = ''
+    try:
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=60) as r:
+            body = r.read(8 * 1024 * 1024 + 1)
+            return r.status, r.headers.get('Content-Type', ctype), str(len(body))
     except Exception:
         req = urllib.request.Request(
             url, headers={**HEADERS, 'Range': 'bytes=0-1023'})

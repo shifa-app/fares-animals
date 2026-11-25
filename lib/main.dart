@@ -5,19 +5,23 @@ import 'package:material_ui/material_ui.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import 'data/animals.dart';
+import 'data/diamond_levels.dart';
 import 'data/letters.dart';
 import 'data/quran.dart';
 import 'data/religion.dart';
 import 'data/stories.dart';
 import 'services/app_sound.dart';
+import 'services/child_profile.dart';
 import 'services/progress_store.dart';
 import 'utils/matching.dart';
 
+/// اسم التطبيق الثابت في النظام؛ العنوان داخل الشاشات يتغير مع الطفل.
 const String appTitle = 'فارس والحيوانات';
-const String dedicationText =
-    'إهداء إلى ابني حبيبي فارس اسامة ابراهيم عبدالحكيم';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // ترحيل تقدم النسخ القديمة إلى ملف فارس قبل أي قراءة للتقدم.
+  await ChildProfile.migrateLegacyProgress();
   runApp(const FaresAnimalsApp());
 }
 
@@ -152,9 +156,14 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  String _childName = ChildProfile.defaultChild;
+
   @override
   void initState() {
     super.initState();
+    ChildProfile.currentChild().then(
+      (name) => mounted ? setState(() => _childName = name) : null,
+    );
     Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -186,10 +195,10 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      appTitle,
+                    Text(
+                      ChildProfile.appTitleFor(_childName),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 44,
                         fontWeight: FontWeight.bold,
                         color: Colors.orange,
@@ -207,7 +216,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Padding(
               padding: const EdgeInsets.all(20),
               child: Text(
-                dedicationText,
+                ChildProfile.dedicationFor(_childName),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 22,
@@ -231,6 +240,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _stars = 0;
+  String _childName = ChildProfile.defaultChild;
+  List<String> _children = ChildProfile.defaultChildren;
 
   @override
   void initState() {
@@ -240,7 +251,186 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _load() async {
     final s = await ProgressStore.stars();
-    if (mounted) setState(() => _stars = s);
+    final name = await ChildProfile.currentChild();
+    final kids = await ChildProfile.children();
+    if (mounted) {
+      setState(() {
+        _stars = s;
+        _childName = name;
+        _children = kids;
+      });
+    }
+  }
+
+  /// ورقة تبديل الطفل: اختيار طفل أو إضافة طفل جديد أو حذف طفل.
+  Future<void> _showChildSwitcher() async {
+    final nameController = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+        ),
+        child: StatefulBuilder(
+          builder: (context, setSheetState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'من يلعب الآن؟',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              for (final kid in _children)
+                ListTile(
+                  leading: Icon(
+                    kid == _childName
+                        ? Icons.check_circle
+                        : Icons.account_circle,
+                    size: 40,
+                    color: kid == _childName ? Colors.green : Colors.orange,
+                  ),
+                  title: Text(
+                    kid,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  trailing: _children.length > 1
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.delete,
+                            size: 30,
+                            color: Colors.red,
+                          ),
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: Text(
+                                  'حذف $kid؟',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                content: Text(
+                                  'سيُحذف $kid وتقدمه كاملاً (نجومه وما تعلمه). هل أنت متأكد؟',
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text(
+                                      'إلغاء',
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text(
+                                      'نعم، احذف',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed != true) return;
+                            await ChildProfile.removeChild(kid);
+                            final kids = await ChildProfile.children();
+                            final current =
+                                await ChildProfile.currentChild();
+                            setSheetState(() => _children = kids);
+                            await _load();
+                            if (current != _childName) {
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                              }
+                            }
+                          },
+                        )
+                      : null,
+                  onTap: () async {
+                    await ChildProfile.setCurrent(kid);
+                    if (context.mounted) Navigator.pop(context);
+                    await _load();
+                  },
+                ),
+              const Divider(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: nameController,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 24),
+                      decoration: const InputDecoration(
+                        hintText: 'اسم طفل جديد',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final added = await ChildProfile.addChild(
+                        nameController.text,
+                      );
+                      if (!added) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'اكتب اسماً جديداً غير مكرر',
+                                style: TextStyle(fontSize: 20),
+                              ),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+                      await ChildProfile.setCurrent(
+                        nameController.text.trim(),
+                      );
+                      if (context.mounted) Navigator.pop(context);
+                      await _load();
+                    },
+                    icon: const Icon(Icons.add, size: 30),
+                    label: const Text(
+                      'أضف طفلاً',
+                      style: TextStyle(fontSize: 22),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -248,13 +438,20 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.amber.shade50,
       appBar: AppBar(
-        title: const Text(
-          'فارس والحيوانات',
-          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+        title: Text(
+          ChildProfile.appTitleFor(_childName),
+          style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.switch_account, size: 32),
+            tooltip: 'تبديل الطفل',
+            onPressed: _showChildSwitcher,
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -283,9 +480,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'أهلاً يا فارس!',
-                            style: TextStyle(
+                          Text(
+                            'أهلاً يا $_childName!',
+                            style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                             ),
@@ -418,12 +615,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.orange.shade200, width: 2),
                 ),
-                child: const Text(
-                  dedicationText,
+                child: Text(
+                  ChildProfile.dedicationFor(_childName),
                   textAlign: TextAlign.center,
                   softWrap: true,
                   maxLines: 2,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.brown,
@@ -1319,8 +1516,26 @@ class NamesScreen extends StatelessWidget {
   }
 }
 
-class StoriesScreen extends StatelessWidget {
+class StoriesScreen extends StatefulWidget {
   const StoriesScreen({super.key});
+  @override
+  State<StoriesScreen> createState() => _StoriesScreenState();
+}
+
+class _StoriesScreenState extends State<StoriesScreen> {
+  String _childName = ChildProfile.defaultChild;
+
+  @override
+  void initState() {
+    super.initState();
+    ChildProfile.currentChild().then(
+      (name) => mounted ? setState(() => _childName = name) : null,
+    );
+  }
+
+  /// اسم بطل القصة هو الطفل الحالي («فارس الصغير» تصير «فهد الصغير»).
+  String _hero(String text) => text.replaceAll('فارس', _childName);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1346,7 +1561,7 @@ class StoriesScreen extends StatelessWidget {
                 color: Colors.orange,
               ),
               title: Text(
-                st.title,
+                _hero(st.title),
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -1361,7 +1576,7 @@ class StoriesScreen extends StatelessWidget {
                 ),
                 onPressed: () {
                   AppSound.instance.speak(
-                    '${st.title}. ${st.body} ${st.moral}',
+                    '${_hero(st.title)}. ${_hero(st.body)} ${st.moral}',
                   );
                   ProgressStore.markReligion('story_${st.title}');
                 },
@@ -1370,7 +1585,7 @@ class StoriesScreen extends StatelessWidget {
                 context: context,
                 builder: (_) => AlertDialog(
                   title: Text(
-                    st.title,
+                    _hero(st.title),
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -1378,7 +1593,7 @@ class StoriesScreen extends StatelessWidget {
                   ),
                   content: SingleChildScrollView(
                     child: Text(
-                      st.body,
+                      _hero(st.body),
                       style: const TextStyle(fontSize: 22, height: 1.8),
                     ),
                   ),
@@ -1510,6 +1725,21 @@ class GamesScreen extends StatelessWidget {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const MemoryGame()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 128,
+              child: BigButton(
+                icon: Icons.diamond,
+                label: 'أكل الماس 💎',
+                color: Colors.cyan,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const DiamondGameScreen(),
+                  ),
                 ),
               ),
             ),
@@ -1942,6 +2172,414 @@ class _MemoryGameState extends State<MemoryGame> {
 
 // ---------------- نجومي ----------------
 
+// ---------------- لعبة أكل الماس 💎 ----------------
+
+/// شاشة اختيار المرحلة: 10 مراحل، المقفلة بقفل، والمكتملة بنجمة.
+class DiamondGameScreen extends StatefulWidget {
+  const DiamondGameScreen({super.key});
+  @override
+  State<DiamondGameScreen> createState() => _DiamondGameScreenState();
+}
+
+class _DiamondGameScreenState extends State<DiamondGameScreen> {
+  int _unlocked = 1;
+  Map<int, int> _best = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final unlocked = await ProgressStore.diamondUnlocked();
+    final best = <int, int>{};
+    for (final lv in diamondLevels) {
+      best[lv.level] = await ProgressStore.diamondBest(lv.level);
+    }
+    if (mounted) setState(() => _unlocked = unlocked);
+    if (mounted) setState(() => _best = best);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.cyan.shade50,
+      appBar: AppBar(
+        title: const Text(
+          'أكل الماس 💎',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.cyan,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text(
+              'اضغط على الماسة ليأكلها الحيوان! أكمل الهدف قبل انتهاء الوقت.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1.6,
+                ),
+                itemCount: diamondLevels.length,
+                itemBuilder: (context, i) {
+                  final lv = diamondLevels[i];
+                  final open = lv.level <= _unlocked;
+                  final done =
+                      (_best[lv.level] ?? 0) >= lv.target;
+                  return ElevatedButton(
+                    onPressed: open
+                        ? () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  DiamondLevelScreen(level: lv.level),
+                            ),
+                          ).then((_) => _load())
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: open ? Colors.cyan : Colors.grey,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          open
+                              ? (done ? Icons.star : Icons.diamond)
+                              : Icons.lock,
+                          size: 40,
+                        ),
+                        Text(
+                          'المرحلة ${lv.level}',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'كل ${lv.target} 💎 في ${lv.seconds} ث',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ماسة واحدة على الساحة.
+class _Diamond {
+  final int id;
+  final double x;
+  final double y;
+  _Diamond({required this.id, required this.x, required this.y});
+}
+
+/// شاشة لعب مرحلة: ماسات تظهر عشوائياً وتختفي، والضغط عليها يأكلها.
+class DiamondLevelScreen extends StatefulWidget {
+  final int level;
+  const DiamondLevelScreen({super.key, required this.level});
+  @override
+  State<DiamondLevelScreen> createState() => _DiamondLevelScreenState();
+}
+
+class _DiamondLevelScreenState extends State<DiamondLevelScreen> {
+  late final DiamondLevel _config;
+  int _timeLeft = 0;
+  int _eaten = 0;
+  int _nextId = 0;
+  final List<_Diamond> _diamonds = [];
+  Timer? _timer;
+  bool _over = false;
+  double _areaWidth = 300;
+  double _areaHeight = 300;
+  String _childName = ChildProfile.defaultChild;
+  // الحيوان يتغير كل مرحلة، والضغط عليه يبدّله.
+  late int _animalIndex;
+  // آخر مرة نطق فيها «يم!» — لمنع تداخل الصوت عند الضغط السريع.
+  DateTime _lastYum = DateTime.fromMillisecondsSinceEpoch(0);
+
+  @override
+  void initState() {
+    super.initState();
+    _config = diamondLevel(widget.level);
+    _timeLeft = _config.seconds;
+    _animalIndex = (widget.level - 1) % diamondAnimals.length;
+    ChildProfile.currentChild().then(
+      (name) => mounted ? setState(() => _childName = name) : null,
+    );
+    _startTimer();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (var i = 0; i < _config.maxDiamonds; i++) {
+        _spawnDiamond();
+      }
+    });
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _over) return;
+      setState(() => _timeLeft--);
+      if (_timeLeft <= 0) _finish(false);
+    });
+  }
+
+  @override
+  void dispose() {
+    // إيقاف المؤقت والصوت فوراً عند الرجوع.
+    _timer?.cancel();
+    unawaited(AppSound.instance.stopAll());
+    super.dispose();
+  }
+
+  void _spawnDiamond() {
+    if (_over || !mounted) return;
+    final id = _nextId++;
+    final d = _Diamond(
+      id: id,
+      x: Random().nextDouble() * (_areaWidth - 72),
+      y: Random().nextDouble() * (_areaHeight - 72),
+    );
+    setState(() => _diamonds.add(d));
+    // تختفي الماسة بعد مدة إن لم تُؤكل، وتظهر غيرها.
+    Future.delayed(
+      Duration(milliseconds: (_config.despawnSeconds * 1000).round()),
+      () {
+        if (!mounted || _over) return;
+        final wasThere = _diamonds.any((e) => e.id == id);
+        if (!wasThere) return;
+        setState(() => _diamonds.removeWhere((e) => e.id == id));
+        _spawnDiamond();
+      },
+    );
+  }
+
+  void _eatDiamond(_Diamond d) {
+    if (_over) return;
+    setState(() {
+      _diamonds.removeWhere((e) => e.id == d.id);
+      _eaten++;
+    });
+    // صوت «يم!» واحد فقط كل 400 مللي ثانية حتى مع الضغط السريع.
+    final now = DateTime.now();
+    if (now.difference(_lastYum).inMilliseconds >= 400) {
+      _lastYum = now;
+      unawaited(AppSound.instance.speak('يم!'));
+    }
+    if (_eaten >= _config.target) {
+      _finish(true);
+    } else {
+      _spawnDiamond();
+    }
+  }
+
+  /// إعادة المرحلة من البداية بعد انتهاء الوقت (بلا خصم نجوم أبداً).
+  void _restart() {
+    _timer?.cancel();
+    setState(() {
+      _over = false;
+      _eaten = 0;
+      _timeLeft = _config.seconds;
+      _diamonds.clear();
+    });
+    _startTimer();
+    for (var i = 0; i < _config.maxDiamonds; i++) {
+      _spawnDiamond();
+    }
+  }
+
+  Future<void> _finish(bool won) async {
+    if (_over) return;
+    _over = true;
+    _timer?.cancel();
+    await ProgressStore.saveDiamondBest(widget.level, _eaten);
+    if (won) {
+      await ProgressStore.addStars(1);
+      if (widget.level < diamondLevels.length) {
+        await ProgressStore.unlockDiamondLevel(widget.level + 1);
+      }
+      final name = await ChildProfile.currentChild();
+      if (mounted) setState(() => _childName = name);
+      await AppSound.instance.speak(
+        'أحسنت يا $_childName! أكملت المرحلة ${widget.level}!',
+      );
+    }
+    if (!mounted) return;
+    final retry = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(
+          won ? 'رائع! 🎉' : 'لا بأس يا بطل! 💪',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          won
+              ? 'أكلت ${_config.target} ماسات في المرحلة ${widget.level}، وكسبت نجمة! ⭐'
+              : 'أكلت $_eaten من ${_config.target} ماسات. أنت تستطيع! حاول مجدداً.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22),
+        ),
+        actions: [
+          if (!won)
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'حاول مجدداً',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('حسناً', style: TextStyle(fontSize: 22)),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (retry == true) {
+      _restart();
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.cyan.shade50,
+      appBar: AppBar(
+        title: Text(
+          'المرحلة ${widget.level} 💎',
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.cyan,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _stat('💎 $_eaten / ${_config.target}', Colors.cyan),
+                _stat(
+                  '⏱ $_timeLeft ث',
+                  _timeLeft <= 10 ? Colors.red : Colors.orange,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                _areaWidth = constraints.maxWidth;
+                _areaHeight = constraints.maxHeight;
+                return Stack(
+                  children: [
+                    // حيوان الساحة: يتغير كل مرحلة، والضغط عليه يبدّله.
+                    Positioned(
+                      bottom: 8,
+                      left: 0,
+                      right: 0,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () => setState(
+                              () => _animalIndex =
+                                  (_animalIndex + 1) %
+                                  diamondAnimals.length,
+                            ),
+                            child: Text(
+                              diamondAnimals[_animalIndex],
+                              style: const TextStyle(fontSize: 110),
+                            ),
+                          ),
+                          const Text(
+                            'اضغط على الحيوان لتغييره',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    for (final d in _diamonds)
+                      Positioned(
+                        left: d.x,
+                        top: d.y,
+                        child: GestureDetector(
+                          onTap: () => _eatDiamond(d),
+                          // منطقة لمس كبيرة لعمر 5 سنوات: الماسة نفسها
+                          // كبيرة (88) مع حشوة شفافة حولها.
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            color: Colors.transparent,
+                            child: const Text(
+                              '💎',
+                              style: TextStyle(fontSize: 88),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color, width: 3),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
 class StarsScreen extends StatefulWidget {
   const StarsScreen({super.key});
   @override
@@ -1978,6 +2616,7 @@ class _StarsScreenState extends State<StarsScreen> {
   int _religion = 0;
   int _learn = 0;
   Set<String> _badges = {};
+  String _childName = ChildProfile.defaultChild;
 
   @override
   void initState() {
@@ -2004,6 +2643,7 @@ class _StarsScreenState extends State<StarsScreen> {
     );
     if (bed >= 1) await ProgressStore.unlockBadge('story_reader');
     final badges = await ProgressStore.badges();
+    final childName = await ChildProfile.currentChild();
     if (mounted) {
       setState(() {
         _stars = s;
@@ -2011,6 +2651,7 @@ class _StarsScreenState extends State<StarsScreen> {
         _religion = r;
         _learn = ln;
         _badges = badges;
+        _childName = childName;
       });
     }
   }
@@ -2113,10 +2754,10 @@ class _StarsScreenState extends State<StarsScreen> {
               },
             ),
             const SizedBox(height: 24),
-            const Text(
-              'استمر يا فارس! كل نجمة تعني أنك تعلمت شيئاً جديداً.',
+            Text(
+              'استمر يا $_childName! كل نجمة تعني أنك تعلمت شيئاً جديداً.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22),
+              style: const TextStyle(fontSize: 22),
             ),
           ],
         ),
@@ -3179,8 +3820,9 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
     }
     if (_learned.length == widget.surah.ayahs.length) {
       await ProgressStore.markReligion('memorize_${widget.surah.number}');
+      final childName = await ChildProfile.currentChild();
       await AppSound.instance.speak(
-        'أحسنت يا فارس! حفظت سورة ${widget.surah.name}!',
+        'أحسنت يا $childName! حفظت سورة ${widget.surah.name}!',
       );
     }
   }
@@ -3968,6 +4610,7 @@ class ParentsSettingsScreen extends StatefulWidget {
 class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
   double _volume = 1.0;
   int _stars = 0;
+  String _childName = ChildProfile.defaultChild;
 
   @override
   void initState() {
@@ -3977,6 +4620,9 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
     );
     ProgressStore.stars().then(
       (v) => mounted ? setState(() => _stars = v) : null,
+    );
+    ChildProfile.currentChild().then(
+      (name) => mounted ? setState(() => _childName = name) : null,
     );
   }
 
@@ -3988,9 +4634,9 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
           'إعادة ضبط التقدم؟',
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          'سيُمسح كل التقدم: النجوم والحيوانات المتعلمة والدروس والأوسمة. هل أنت متأكد؟',
-          style: TextStyle(fontSize: 20),
+        content: Text(
+          'سيُمسح تقدم $_childName فقط: نجومه والحيوانات التي تعلمها والدروس والأوسمة. تقدم الأطفال الآخرين يبقى كما هو. هل أنت متأكد؟',
+          style: const TextStyle(fontSize: 20),
         ),
         actions: [
           TextButton(
@@ -4093,7 +4739,7 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'النجوم الحالية: $_stars',
+                      'نجوم $_childName: $_stars',
                       style: const TextStyle(fontSize: 22),
                     ),
                     const SizedBox(height: 16),

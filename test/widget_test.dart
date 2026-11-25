@@ -4,6 +4,7 @@ import 'package:animals/data/quran.dart';
 import 'package:animals/data/religion.dart';
 import 'package:animals/data/stories.dart';
 import 'package:animals/main.dart';
+import 'package:animals/services/child_profile.dart';
 import 'package:animals/utils/matching.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -97,12 +98,12 @@ void main() {
       }
     });
     test('every animal has a verified real sound or an explicitly empty soundUrl', () {
-      // 59 animals have a real, HTTP-verified sound (see tool/verify_animal_media.py);
-      // the other 41 are explicitly silent — no unverified or generic link remains.
+      // 74 animals have a real, HTTP-verified sound (see tool/verify_animal_media.py);
+      // the other 26 are explicitly silent — no unverified or generic link remains.
       final withSound = animals.where((a) => a.soundUrl.isNotEmpty).toList();
       final silent = animals.where((a) => a.soundUrl.isEmpty).toList();
-      expect(withSound.length, 59);
-      expect(silent.length, 41);
+      expect(withSound.length, 74);
+      expect(silent.length, 26);
       for (final a in animals) {
         expect(a.hasRealSound, a.soundUrl.isNotEmpty, reason: a.nameAr);
         if (a.soundUrl.isNotEmpty) {
@@ -228,9 +229,10 @@ void main() {
     test('correct app title and dedication text', () {
       expect(appTitle, 'فارس والحيوانات');
       expect(
-        dedicationText,
+        ChildProfile.dedicationFor('فارس'),
         'إهداء إلى ابني حبيبي فارس اسامة ابراهيم عبدالحكيم',
       );
+      expect(ChildProfile.appTitleFor('فهد'), 'فهد والحيوانات');
     });
   });
 }

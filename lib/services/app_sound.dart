@@ -15,6 +15,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../data/animals.dart';
+import 'child_profile.dart';
 import 'progress_store.dart';
 
 class AppSound {
@@ -255,7 +256,10 @@ class AppSound {
   ];
 
   Future<void> praise([int index = 0]) async {
-    await speak(praises[index % praises.length]);
+    final name = await ChildProfile.currentChild();
+    final text =
+        praises[index % praises.length].replaceAll('فارس', name);
+    await speak(text);
   }
 
   Future<void> dispose() async {
