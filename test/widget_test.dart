@@ -205,9 +205,10 @@ void main() {
   });
 
   group('bedtime stories data', () {
-    test('8 short stories with morals', () {
-      expect(bedtimeStories.length, 8);
+    test('13 stories: 8 short with morals + 5 five-minute', () {
+      expect(bedtimeStories.length, 13);
       expect(bedtimeStories.where((s) => s.isProphet).length, 2);
+      expect(bedtimeStories.where((s) => s.isFiveMinute).length, 5);
       for (final st in bedtimeStories) {
         expect(st.body.length, greaterThan(50), reason: st.title);
         expect(st.moral.isNotEmpty, true);

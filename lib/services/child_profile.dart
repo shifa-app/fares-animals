@@ -33,6 +33,33 @@ class ChildProfile {
     await p.setString(_currentKey, name.trim());
   }
 
+  // ---------------- عمر الطفل (أساس المستويات العمرية) ----------------
+
+  static String _ageKey(String name) => 'child_age_$name';
+
+  /// عمر الطفل بالسنوات (3–10)، أو null إن لم يُحدد بعد.
+  /// فارس عمره 5 سنوات (حقيقة ذكرها المستخدم) فيُستخدم كافتراضي له
+  /// ما لم يحدد الوالد عمراً مختلفاً؛ وأي طفل آخر بلا عمر محدد يبقى null.
+  static Future<int?> childAge(String name) async {
+    final p = await SharedPreferences.getInstance();
+    final stored = p.getInt(_ageKey(name));
+    if (stored != null) return stored;
+    if (name == defaultChild) return 5;
+    return null;
+  }
+
+  /// يحفظ عمر الطفل (يُقيد إلى 3–10 سنوات).
+  static Future<void> setChildAge(String name, int age) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setInt(_ageKey(name), age.clamp(3, 10));
+  }
+
+  /// يمسح العمر المحفوظ فيعود للافتراضي (فارس 5، وغيره بلا عمر محدد).
+  static Future<void> clearChildAge(String name) async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_ageKey(name));
+  }
+
   /// يضيف طفلاً جديداً. يرجع false إن كان الاسم فارغاً أو مكرراً أو طويلاً.
   static Future<bool> addChild(String name) async {
     final clean = name.trim();

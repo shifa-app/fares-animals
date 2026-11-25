@@ -1,4 +1,4 @@
-import 'package:animals/main.dart';
+import 'package:animals/widgets/app_footer.dart';
 import 'package:animals/services/child_profile.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';

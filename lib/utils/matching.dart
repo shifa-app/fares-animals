@@ -72,3 +72,11 @@ const Map<String, String> categoryNames = {
   'reptiles': 'زواحف وحشرات',
   'desert': 'حيوانات الصحراء والثلج',
 };
+
+/// يبحث عن حيوان باسمه العربي تماماً (يُستخدم في شاشات الحروف والأرقام).
+Animal? findAnimalByName(String nameAr) {
+  for (final a in animals) {
+    if (a.nameAr == nameAr) return a;
+  }
+  return null;
+}

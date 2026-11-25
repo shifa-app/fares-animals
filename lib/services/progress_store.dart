@@ -2,6 +2,7 @@
 // التقدم مستقل لكل طفل: كل مفتاح مسبوق ببادئة الطفل الحالي.
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/quran.dart';
 import 'child_profile.dart';
 
 class ProgressStore {
@@ -21,6 +22,12 @@ class ProgressStore {
   static Future<int> stars() async {
     final p = await SharedPreferences.getInstance();
     return p.getInt('${await _prefix()}$_starsKey') ?? 0;
+  }
+
+  /// نجوم طفل محدد (بلا تبديل الطفل الحالي).
+  static Future<int> starsFor(String child) async {
+    final p = await SharedPreferences.getInstance();
+    return p.getInt('${ChildProfile.keyPrefix(child)}$_starsKey') ?? 0;
   }
 
   static Future<int> addStars(int n) async {
@@ -55,6 +62,15 @@ class ProgressStore {
     return p.getBool('${await _prefix()}$_starredPrefix$activityId') ?? false;
   }
 
+  /// هل سبق منح نجمة لهذا الإنجاز لطفل محدد (بلا تبديل الطفل الحالي)؟
+  static Future<bool> hasStarForChild(String child, String activityId) async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(
+          '${ChildProfile.keyPrefix(child)}$_starredPrefix$activityId',
+        ) ??
+        false;
+  }
+
   static Future<bool> isLearned(String nameAr) async {
     final p = await SharedPreferences.getInstance();
     return p.getBool('${await _prefix()}$_learnedPrefix$nameAr') ?? false;
@@ -63,6 +79,36 @@ class ProgressStore {
   static Future<void> markLearned(String nameAr) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool('${await _prefix()}$_learnedPrefix$nameAr', true);
+    await logActivity('تعلّمت $nameAr');
+  }
+
+  // ---------------- المفضلة ----------------
+
+  static const _favoritesKey = 'favorites';
+
+  /// أسماء الحيوانات المفضلة لدى الطفل الحالي.
+  static Future<List<String>> favorites() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getStringList('${await _prefix()}$_favoritesKey') ?? [];
+  }
+
+  static Future<bool> isFavorite(String nameAr) async =>
+      (await favorites()).contains(nameAr);
+
+  /// يبدّل المفضلة لحيوان، ويعيد الحالة الجديدة
+  /// (true = أُضيف إلى المفضلة، false = أُزيل منها).
+  static Future<bool> toggleFavorite(String nameAr) async {
+    final p = await SharedPreferences.getInstance();
+    final key = '${await _prefix()}$_favoritesKey';
+    final list = List<String>.from(p.getStringList(key) ?? []);
+    final added = !list.contains(nameAr);
+    if (added) {
+      list.add(nameAr);
+    } else {
+      list.remove(nameAr);
+    }
+    await p.setStringList(key, list);
+    return added;
   }
 
   static Future<int> learnedCount(List<String> names) async {
@@ -78,6 +124,34 @@ class ProgressStore {
   static Future<void> markReligion(String key) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool('${await _prefix()}$_religionPrefix$key', true);
+    final label = _religionLabel(key);
+    if (label != null) await logActivity(label);
+  }
+
+  /// وصف عربي قصير لمفتاح ديني، ليظهر في آخر الأنشطة.
+  static String? _religionLabel(String key) {
+    if (key.startsWith('number_')) {
+      return 'تعلّم الرقم ${key.substring('number_'.length)}';
+    }
+    if (key.startsWith('letter_ar_')) {
+      return 'تعلّم الحرف ${key.substring('letter_ar_'.length)}';
+    }
+    if (key.startsWith('letter_en_')) {
+      return 'تعلّم الحرف ${key.substring('letter_en_'.length)}';
+    }
+    if (key.startsWith('memorize_')) {
+      final n = int.tryParse(key.substring('memorize_'.length));
+      final name = n == null
+          ? null
+          : memorizeSurahs
+              .where((s) => s.number == n)
+              .map((s) => s.name)
+              .firstOrNull;
+      return name == null ? 'حفظ سورة' : 'حفظ سورة $name';
+    }
+    if (key.startsWith('story_bed_')) return 'استمع إلى قصة';
+    if (key.startsWith('dhikr_')) return 'تعلّم ذكراً';
+    return null;
   }
 
   static Future<bool> isReligion(String key) async {
@@ -93,6 +167,54 @@ class ProgressStore {
       if (p.getBool('$prefix$_religionPrefix$k') ?? false) c++;
     }
     return c;
+  }
+
+  // ---------------- قراءة تقدم طفل محدد (بلا تبديل الطفل الحالي) ----------------
+
+  /// عدد الحيوانات المتعلمة لطفل محدد.
+  static Future<int> learnedCountFor(String child, List<String> names) async {
+    final p = await SharedPreferences.getInstance();
+    final prefix = ChildProfile.keyPrefix(child);
+    var c = 0;
+    for (final n in names) {
+      if (p.getBool('$prefix$_learnedPrefix$n') ?? false) c++;
+    }
+    return c;
+  }
+
+  /// عدد مفاتيح الدين المتعلمة لطفل محدد.
+  static Future<int> religionCountFor(String child, List<String> keys) async {
+    final p = await SharedPreferences.getInstance();
+    final prefix = ChildProfile.keyPrefix(child);
+    var c = 0;
+    for (final k in keys) {
+      if (p.getBool('$prefix$_religionPrefix$k') ?? false) c++;
+    }
+    return c;
+  }
+
+  // ---------------- آخر الأنشطة (تظهر في الرئيسية) ----------------
+
+  static const _recentKey = 'recent';
+
+  /// أقصى عدد أنشطة يُعرض في الرئيسية.
+  static const int recentMax = 4;
+
+  /// آخر أنشطة الطفل الحالي (الأحدث أولاً، حتى [recentMax]).
+  static Future<List<String>> recentActivities() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getStringList('${await _prefix()}$_recentKey') ?? <String>[];
+  }
+
+  /// يسجل نشاطاً في آخر الأنشطة (الأحدث أولاً، بلا تكرار متتالٍ).
+  static Future<void> logActivity(String label) async {
+    if (label.trim().isEmpty) return;
+    final p = await SharedPreferences.getInstance();
+    final key = '${await _prefix()}$_recentKey';
+    final list = (p.getStringList(key) ?? <String>[]).toList();
+    if (list.isNotEmpty && list.first == label) return;
+    list.insert(0, label);
+    await p.setStringList(key, list.take(recentMax).toList());
   }
 
   // ---------------- الأوسمة ----------------
@@ -147,12 +269,22 @@ class ProgressStore {
     return p.getInt('${await _prefix()}$_diamondUnlockedKey') ?? 1;
   }
 
+  /// أعلى مرحلة ماس مفتوحة لطفل محدد.
+  static Future<int> diamondUnlockedFor(String child) async {
+    final p = await SharedPreferences.getInstance();
+    return p.getInt('${ChildProfile.keyPrefix(child)}$_diamondUnlockedKey') ??
+        1;
+  }
+
   /// يفتح المرحلة التالية بعد إكمال مرحلة (لا ينقص أبداً).
   static Future<void> unlockDiamondLevel(int level) async {
     final p = await SharedPreferences.getInstance();
     final key = '${await _prefix()}$_diamondUnlockedKey';
     final current = p.getInt(key) ?? 1;
-    if (level > current) await p.setInt(key, level);
+    if (level > current) {
+      await p.setInt(key, level);
+      await logActivity('فتح مرحلة الماس $level');
+    }
   }
 
   /// أفضل عدد ماسات أكلها الطفل في مرحلة ما.
@@ -167,6 +299,27 @@ class ProgressStore {
     final key = '${await _prefix()}$_diamondBestPrefix$level';
     final current = p.getInt(key) ?? 0;
     if (eaten > current) await p.setInt(key, eaten);
+  }
+
+  // ---------------- حفّار الماس ⛏️ (مستقل لكل طفل) ----------------
+
+  static const _diggerUnlockedKey = 'digger_unlocked';
+
+  /// أعلى مرحلة مفتوحة في حفّار الماس (تبدأ بـ 1).
+  static Future<int> diggerUnlocked() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getInt('${await _prefix()}$_diggerUnlockedKey') ?? 1;
+  }
+
+  /// يفتح المرحلة التالية بعد إكمال مرحلة (لا ينقص أبداً).
+  static Future<void> unlockDiggerLevel(int level) async {
+    final p = await SharedPreferences.getInstance();
+    final key = '${await _prefix()}$_diggerUnlockedKey';
+    final current = p.getInt(key) ?? 1;
+    if (level > current) {
+      await p.setInt(key, level);
+      await logActivity('فتح مرحلة حفّار الماس $level');
+    }
   }
 
   // ---------------- إعادة ضبط التقدم (ركن الوالدين) ----------------
