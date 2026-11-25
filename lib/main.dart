@@ -149,6 +149,106 @@ class BigButton extends StatelessWidget {
   }
 }
 
+// ---------------- الفوتر الموحد: الحقوق + الإهداء ----------------
+
+/// سطر الحقوق الثابت في كل الصفحات.
+const String appRightsLine = 'جميع الحقوق محفوظة © فارس والحيوانات';
+
+/// فوتر موحد لكل الصفحات: سطر الحقوق + الإهداء باسم الطفل الحالي.
+/// [AppFooter.big] للرئيسية (الإهداء بخطه الكبير داخل إطاره البرتقالي)،
+/// و[AppFooter.small] لباقي الصفحات (خط صغير).
+class AppFooter extends StatefulWidget {
+  final bool big;
+  const AppFooter.big({super.key}) : big = true;
+  const AppFooter.small({super.key}) : big = false;
+  @override
+  State<AppFooter> createState() => _AppFooterState();
+}
+
+class _AppFooterState extends State<AppFooter> {
+  String _childName = ChildProfile.defaultChild;
+
+  @override
+  void initState() {
+    super.initState();
+    ChildProfile.currentChild().then(
+      (name) => mounted ? setState(() => _childName = name) : null,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dedication = ChildProfile.dedicationFor(_childName);
+    if (widget.big) {
+      return SafeArea(
+        top: false,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.orange.shade200, width: 2),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                dedication,
+                textAlign: TextAlign.center,
+                softWrap: true,
+                maxLines: 2,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.brown,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                appRightsLine,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return SafeArea(
+      top: false,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              dedication,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.brown,
+              ),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              appRightsLine,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override
@@ -215,14 +315,25 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             Padding(
               padding: const EdgeInsets.all(20),
-              child: Text(
-                ChildProfile.dedicationFor(_childName),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.brown,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    ChildProfile.dedicationFor(_childName),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.brown,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    appRightsLine,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
               ),
             ),
           ],
@@ -436,6 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.big(),
       backgroundColor: Colors.amber.shade50,
       appBar: AppBar(
         title: Text(
@@ -602,32 +714,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            SafeArea(
-              top: false,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.orange.shade200, width: 2),
-                ),
-                child: Text(
-                  ChildProfile.dedicationFor(_childName),
-                  textAlign: TextAlign.center,
-                  softWrap: true,
-                  maxLines: 2,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.brown,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -733,6 +819,7 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.amber.shade50,
       appBar: AppBar(
         title: const Text(
@@ -931,6 +1018,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
   Widget build(BuildContext context) {
     final a = widget.animal;
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.amber.shade50,
       appBar: AppBar(
         title: Text(
@@ -1068,6 +1156,7 @@ class ReligionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.teal.shade50,
       appBar: AppBar(
         title: const Text(
@@ -1179,6 +1268,7 @@ class AdhkarScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'الأذكار',
@@ -1339,6 +1429,7 @@ class WuduPrayerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'الوضوء والصلاة',
@@ -1469,6 +1560,7 @@ class NamesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'أسماء الله الحسنى',
@@ -1539,6 +1631,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'قصص جميلة',
@@ -1621,6 +1714,7 @@ class MannersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'آداب جميلة',
@@ -1675,6 +1769,7 @@ class GamesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.purple.shade50,
       appBar: AppBar(
         title: const Text(
@@ -1816,6 +1911,7 @@ class _GuessSoundGameState extends State<GuessSoundGame> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: Text(
           'خمّن الصوت — الجولة $_round',
@@ -1977,6 +2073,7 @@ class _GuessPictureGameState extends State<GuessPictureGame> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: Text(
           'خمّن الصورة — الجولة $_round',
@@ -2098,6 +2195,7 @@ class _MemoryGameState extends State<MemoryGame> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'لعبة الذاكرة',
@@ -2204,6 +2302,7 @@ class _DiamondGameScreenState extends State<DiamondGameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.cyan.shade50,
       appBar: AppBar(
         title: const Text(
@@ -2471,6 +2570,7 @@ class _DiamondLevelScreenState extends State<DiamondLevelScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.cyan.shade50,
       appBar: AppBar(
         title: Text(
@@ -2659,6 +2759,7 @@ class _StarsScreenState extends State<StarsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.amber.shade50,
       appBar: AppBar(
         title: const Text(
@@ -2806,6 +2907,7 @@ class LearnScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.blue.shade50,
       appBar: AppBar(
         title: const Text(
@@ -2911,6 +3013,7 @@ class _ArabicLettersScreenState extends State<ArabicLettersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'الحروف العربية',
@@ -3014,6 +3117,7 @@ class _ArabicLetterDetailScreenState extends State<ArabicLetterDetailScreen> {
         ? findAnimalByName(l.animalName!)
         : null;
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: Text(
           'حرف ${l.letter}',
@@ -3119,6 +3223,7 @@ class _EnglishLettersScreenState extends State<EnglishLettersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'الحروف الإنجليزية',
@@ -3273,6 +3378,7 @@ class _EnglishLetterDetailScreenState extends State<EnglishLetterDetailScreen> {
   Widget build(BuildContext context) {
     final l = widget.letter;
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: Text(
           'Letter ${l.letter}',
@@ -3362,6 +3468,7 @@ class _NumbersScreenState extends State<NumbersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'الأرقام 1 - 20',
@@ -3465,6 +3572,7 @@ class _NumberDetailScreenState extends State<NumberDetailScreen> {
     final n = widget.number;
     final animal = findAnimalByName(n.animalName);
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: Text(
           'العدد ${n.value}',
@@ -3626,6 +3734,7 @@ class _CountingGameScreenState extends State<CountingGameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'لعبة العدّ',
@@ -3731,6 +3840,7 @@ class _MemorizationListScreenState extends State<MemorizationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: const Text(
           'تحفيظ القرآن',
@@ -3837,6 +3947,7 @@ class _MemorizationDetailScreenState extends State<MemorizationDetailScreen> {
   Widget build(BuildContext context) {
     final s = widget.surah;
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       appBar: AppBar(
         title: Text(
           'سورة ${s.name}',
@@ -4199,6 +4310,7 @@ class _BedtimeStoriesScreenState extends State<BedtimeStoriesScreen> {
   Widget build(BuildContext context) {
     final night = _night;
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: night ? _nightBg : Colors.indigo.shade50,
       appBar: AppBar(
         title: const Text(
@@ -4339,6 +4451,7 @@ class _BedtimeStoryDetailScreenState extends State<BedtimeStoryDetailScreen> {
     final bodyColor = night ? Colors.amber.shade100 : Colors.black;
     final moralColor = night ? Colors.amber.shade200 : Colors.indigo;
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: night ? _nightBg : Colors.indigo.shade50,
       appBar: AppBar(
         title: Text(
@@ -4527,6 +4640,7 @@ class _ParentsGateScreenState extends State<ParentsGateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.brown.shade50,
       appBar: AppBar(
         title: const Text(
@@ -4664,6 +4778,7 @@ class _ParentsSettingsScreenState extends State<ParentsSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const AppFooter.small(),
       backgroundColor: Colors.brown.shade50,
       appBar: AppBar(
         title: const Text(
