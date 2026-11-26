@@ -258,7 +258,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: const AppFooter.big(),
       backgroundColor: Colors.amber.shade50,
       appBar: AppBar(
         title: Text(
@@ -283,129 +282,151 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        'assets/logo_center.png',
-                        width: 110,
-                        height: 80,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'أهلاً يا $_childName!',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
+      // الصفحة كلها تمرَّر كقطعة واحدة: بطاقة الترحيب تخرج لأعلى
+      // والأقسام تأتي مكانها، والسحب يعمل من أي مكان في الشاشة
+      // (ملاحظة المراجعة 1 في 2.0.0: البطاقة والفوتر كانا يضغطان
+      // الصفحة فلا تظهر الأقسام).
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // بطاقة الترحيب بمقاس ثابت (136) لا تتمدد أبداً —
+              // النصوص بسطر واحد مع قطع (…) حتى لا يكبر ارتفاعها.
+              SizedBox(
+                height: 136,
+                child: Card(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset(
+                            'assets/logo_center.png',
+                            width: 84,
+                            height: 64,
+                            fit: BoxFit.cover,
                           ),
-                          Text(
-                            'هيا نتعلم ونلعب معاً',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'المستوى: ${_level.title} • ${_level.label}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.teal,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: LinearProgressIndicator(
-                                    value: _mastery,
-                                    minHeight: 10,
-                                    backgroundColor: Colors.grey.shade300,
-                                    color: Colors.teal,
-                                  ),
+                              Text(
+                                'أهلاً يا $_childName!',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(width: 8),
                               Text(
-                                'الإتقان ${(_mastery * 100).round()}%',
+                                'هيا نتعلم ونلعب معاً',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   color: Colors.grey.shade700,
                                 ),
                               ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'المستوى: ${_level.title} • ${_level.label}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.teal,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: LinearProgressIndicator(
+                                        value: _mastery,
+                                        minHeight: 6,
+                                        backgroundColor: Colors.grey.shade300,
+                                        color: Colors.teal,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'الإتقان ${(_mastery * 100).round()}%',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      children: [
-                        const Icon(Icons.star, size: 32, color: Colors.amber),
-                        Text(
-                          '$_stars',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        ),
+                        Column(
+                          children: [
+                            const Icon(
+                              Icons.star,
+                              size: 26,
+                              color: Colors.amber,
+                            ),
+                            Text(
+                              '$_stars',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-            if (_recent.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'آخر أنشطتك',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              if (_recent.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'آخر أنشطتك',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    for (final a in _recent)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Chip(
-                          label: Text(a, style: const TextStyle(fontSize: 16)),
-                          backgroundColor: Colors.white,
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 44,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (final a in _recent)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Chip(
+                            label: Text(
+                              a,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            backgroundColor: Colors.white,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Expanded(
-              child: GridView.count(
+              ],
+              const SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
@@ -503,9 +524,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           onOpenCategory: (category) => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => AnimalsScreen(
-                                initialCategory: category,
-                              ),
+                              builder: (_) =>
+                                  AnimalsScreen(initialCategory: category),
                             ),
                           ),
                         ),
@@ -527,9 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.pink,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const DrawingScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const DrawingScreen()),
                     ).then((_) => _load()),
                   ),
                   BigButton(
@@ -545,12 +563,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 14),
-          ],
+              const SizedBox(height: 14),
+              // الفوتر في نهاية المحتوى الممرَّر لا شريطاً ثابتاً،
+              // حتى لا يضغط الصفحة ويخفي الأقسام (ملاحظة المراجعة 1).
+              const AppFooter.big(),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
